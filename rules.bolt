@@ -1,0 +1,9 @@
+path / {
+  read() = false;
+  write() = false;
+}
+
+path /foo {
+  read() = true;
+  write() = true;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "singpath-rules",
+  "version": "1.0.0-alpha",
+  "description": "Firebase Rules for Singpath.com DB",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint src/ tests/",
+    "make-rules": "firebase-bolt < rules.bolt > new-rules.json && ./bin/merge-rules extra-rules.json new-rules.json > rules.json && rm new-rules.json",
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/singpath/firebase-rules.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/singpath/firebase-rules/issues"
+  },
+  "homepage": "https://github.com/singpath/firebase-rules#readme",
+  "devDependencies": {
+    "eslint": "^1.8.0"
+  },
+  "dependencies": {
+    "firebase-bolt": "^0.5.0",
+    "firebase-tools": "^2.1.0"
+  }
+}
