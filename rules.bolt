@@ -1,9 +1,112 @@
+type AuthId extends String {
+  validate() = this.matches(/^[-a-zA-Z0-9]+$/);
+}
+
+type BirthYear extends Number {
+  validate() = this > 1900 && this < 2015;
+}
+
+type Email extends String {
+  validate() = this.matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/);
+}
+
+type FullName extends String {
+  validate() = this.length >= 3;
+}
+
+type InitialTimeStamp extends Number {
+  validate() = this != null && (this == now || this == prior(this));
+}
+
+type Name extends String {
+  validate() = this.length >= 3 && this.length <= 64;
+}
+
+type PublicId extends String {
+  validate() = isPublicId(this);
+}
+
+type TimeStamp extends Number {
+  validate() = this == now;
+}
+
+type URL extends String {
+  validate() = this.matches(/^(https?\:)?\/\/.+$/);
+}
+
+type Country {
+  code: String,
+  name: String,
+}
+
+type School {
+  id: String,
+  name: String,
+  type: String,
+
+  iconUrl: String | Null,
+}
+
+type User {
+  validate() = key() == this.id && hasRegisteredPublicId(this.id, this.publicId);
+
+  id: String,
+  publicId: PublicId,
+  fullName: FullName,
+  displayName: Name,
+  email: Email,
+  gravatar: URL,
+  createdAt: InitialTimeStamp,
+
+  country: Country | Null,
+  yearOfBirth: BirthYear | Null,  
+  school: School | Null,
+}
+
 path / {
   read() = false;
   write() = false;
 }
 
-path /foo {
-  read() = true;
-  write() = true;
+path /auth/publicIds/$publicId is AuthId {
+  write() = isCurrentUser(this) && isNew(this);
+  validate() = isPublicId(key()) && hasRegisteredPublicId(this, key());
 }
+
+path /auth/usedPublicIds {
+  read() = true;
+}
+
+path /auth/usedPublicIds/$publicId is Boolean {
+  write() = this != null;
+  validate() = this == (root.auth.publicIds[$publicId] != null);
+}
+
+path /auth/users/$userId is User {
+  write() = this != null && isCurrentUser($userId);
+  read() = isCurrentUser($userId);
+}
+
+isNew(value) = value != null && prior(value) == null;
+
+isEditing(value) = value != null && prior(value) != value;
+
+isDeleting(value) = prior(value) != null && value == null;
+
+isCurrentUser(uid) = isLoggedIn() && auth.uid == uid;
+
+isOwner(uid, obj) = root.auth.publicIds[obj.owner.publicId] == uid;
+
+isLoggedIn() = auth != null;
+
+isPublicId(value) = value.matches(/^[-a-z0-9]{3,20}$/);
+
+isPublicIdUsed(id) = root.auth.usedPublicIds[id] == true;
+
+hasClaimedPublicId(uid, id) = root.auth.publicIds[id] == uid;
+
+hasRegisteredPublicId(uid, id) = (
+  hasClaimedPublicId(uid, id) 
+  && isPublicIdUsed(id)
+  && root.auth.users[uid].publicId == id
+);
