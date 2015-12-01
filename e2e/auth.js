@@ -1,6 +1,5 @@
 'use strict';
 
-// const expect = require('expect.js');
 const Firebase = require('firebase');
 const fb = require('firebase-test');
 

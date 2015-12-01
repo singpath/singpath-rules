@@ -6,6 +6,10 @@ type BirthYear extends Number {
   validate() = this > 1900 && this < 2015;
 }
 
+type Description extends String {
+  validate() = this.length >= 1 && this.length <= 2048;
+}
+
 type Email extends String {
   validate() = this.matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/);
 }
@@ -15,7 +19,11 @@ type FullName extends String {
 }
 
 type InitialTimeStamp extends Number {
-  validate() = this != null && (this == now || this == prior(this));
+  validate() = (prior(this) == null && this == now) || isUnchanged(this);
+}
+
+type Language extends String {
+  validate() = this.matches(/^(python3?|angularjs|javascript|java)$/);
 }
 
 type Name extends String {
@@ -26,8 +34,20 @@ type PublicId extends String {
   validate() = isPublicId(this);
 }
 
+type ProblemSolution extends String {
+  validate() = this.length >= 1 && this.length <= 8192;
+}
+
+type ProblemTest extends String {
+  validate() = this.length >= 1 && this.length <= 4096;
+}
+
 type TimeStamp extends Number {
   validate() = this == now;
+}
+
+type Title extends String {
+  validate() = this.length >= 3 && this.length <= 64;
 }
 
 type URL extends String {
@@ -47,6 +67,117 @@ type School {
   iconUrl: String | Null,
 }
 
+type Path {
+  title: Title,
+  description: Description,
+  language: Language,
+  owner: UserRef,
+}
+
+type Level {
+  title: Title,
+  description: Description,
+  language: Language,
+  owner: UserRef,
+}
+
+type Problem {
+  title: Title,
+  description: Description,
+  language: Language,
+  owner: UserRef,
+  tests: ProblemTest,
+
+  seed: ProblemTest | Null,
+}
+
+
+type Profile {
+  displayName: Name,
+  gravatar: URL,
+
+  country: Country | Null,
+  yearOfBirth: BirthYear | Null,
+  school: School | Null,
+  isAdmin: Boolean | Null,
+  isPremium: Boolean | Null
+}
+
+type SingPathProfile {
+  user: Profile,
+
+  queuedSolutions: Object | Null,
+}
+
+type Solution {
+  validate() = (
+    solutionIsStarted(this)
+    || solutionIsSubmitted(this)
+    || solutionIsVerified(this)
+  );
+
+  meta: SolutionMeta,
+  
+  payload: SolutionPayload | Null,
+  results: Object | Null,
+}
+
+type SolutionMeta {
+  startedAt: TimeStamp,
+  verified: Boolean,
+  solved: Boolean,
+
+  endedAt: TimeStamp | Null,
+  taskId: String | Null,
+  history: Object | Null,
+}
+
+type SolutionPayload {
+  tests: ProblemTest,
+  solution: ProblemSolution,
+  language: Language,
+}
+
+type SolutionResults {
+  solved: Boolean,
+
+  printed: String | Null,
+  errors: String | Null,
+  results: Object | String | Null,
+  meta: Object | Null,
+}
+
+type SolutionRef {
+  startedAt: Number,
+  solved: Boolean,
+  language: Language,
+
+  duration: Number | Null,
+}
+
+type Task {
+  validate() = (
+    isLikeNew(this.owner)
+    && (prior(this) == null || payloadMath(this.payload, prior(this.payload)))
+    && this.createdAt != null
+    && (this.startedAt != null) == this.started
+    && (this.completedAt != null) == this.completed
+  );
+
+  owner: AuthId,
+  payload: SolutionPayload,
+  createdAt: InitialTimeStamp,
+  started: Boolean,
+  completed: Boolean,
+  consumed: Boolean,
+
+  solutionRef: String | Null,
+  startedAt: InitialTimeStamp | Null,
+  completedAt: InitialTimeStamp | Null,
+  worker: AuthId | Null,
+  results: SolutionResults | Null,
+}
+
 type User {
   validate() = key() == this.id && hasRegisteredPublicId(this.id, this.publicId);
 
@@ -62,6 +193,21 @@ type User {
   yearOfBirth: BirthYear | Null,  
   school: School | Null,
 }
+
+type UserRef {
+  validate() = isUserRefInSync(this.publicId, this);
+
+  publicId: PublicId,
+  displayName: Name,
+  gravatar: URL
+}
+
+type Worker {
+  startedAt: InitialTimeStamp,
+  presence: TimeStamp,
+}
+
+
 
 path / {
   read() = false;
@@ -87,26 +233,438 @@ path /auth/users/$userId is User {
   read() = isCurrentUser($userId);
 }
 
+path /singpath/admin is Map<AuthId, Boolean> {
+  read() = false;
+  write() = false;
+}
+
+path /singpath/userProfiles {
+  read() = true;
+}
+
+path /singpath/userProfiles/$publicId is SingPathProfile;
+
+path /singpath/userProfiles/$publicId/user is Profile {
+  write() = isCurrentUserProfile($publicId);
+  validate() = isProfileInSync($publicId, this) && (
+    this.isAdmin == null || this.isAdmin == isAppAdmin('singpath')
+  );
+}
+
+path /singpath/userProfiles/$publicId/queuedSolutions/$pathId/$levelId/$problemId/$queueId is SolutionRef {
+  write() = (this != null) == solutionExists($pathId, $levelId, $problemId, $queueId, $publicId);
+  validate() = isSolutionInSync($pathId, $levelId, $problemId, $queueId, $publicId, this);
+}
+
+path /singpath/paths {
+  read() = true;
+}
+
+path /singpath/paths/$pathId is Path {
+  write() = (
+    (isAppAdmin('singpath') || (isEditing(this) && isOwner(this)))
+    && (this != null || pathHasNoLevel($pathId))
+  );
+}
+
+path /singpath/levels {
+  read() = true;
+}
+
+path /singpath/levels/$pathId {
+  write() = (
+    this == null
+    && (isAppAdmin('singpath') || isOwner(root.singpath.problems[$pathId]))
+    && pathHasNoLevel($pathId)
+  );
+}
+
+path /singpath/levels/$pathId/$levelId is Level {
+  write() = (
+    (isAppAdmin('singpath') || isOwner(this))
+    && (this != null || levelHasNoProblem($pathId, $levelId))
+  );
+  validate() = pathExists($pathId) && isLevelInSync($pathId, this);
+}
+
+path /singpath/problems {
+  read() = true;
+}
+
+path /singpath/problems/$pathId {
+  write() = (
+    this == null
+    && (isAppAdmin('singpath') || isOwner(root.singpath.problems[$pathId]))
+    && pathHasNoLevel($pathId)
+  );
+}
+
+path /singpath/problems/$pathId/$levelId {
+  write() = (
+    this == null 
+    && (isAppAdmin('singpath') || isOwner(root.singpath.levels[$pathId][$levelId]))
+    && levelHasNoProblem($pathId, $levelId)
+  );
+}
+
+path /singpath/problems/$pathId/$levelId/$problemId is Problem {
+  write() = (
+    (isAppAdmin('singpath') || isOwner(this))
+    && (this != null || problemHasNoSolution($pathId, $levelId, $problemId))
+  );
+  validate() = levelExists($pathId, $levelId) && isProblemInSync($pathId, $levelId, this);
+}
+
+path /singpath/queuedSolutions/$pathId {
+  write() = (
+    this == null
+    && (isAppAdmin('singpath') || isOwner(root.singpath.paths[$pathId]))
+    && pathHasNoLevel($pathId)
+  );
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId {
+  write() = (
+    this == null 
+    && (isAppAdmin('singpath') || isOwner(root.singpath.levels[$pathId][$levelId]))
+    && levelHasNoProblem($pathId, $levelId)
+  );
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId {
+  write() = (
+    this == null 
+    && (isAppAdmin('singpath') || isOwner(root.singpath.problems[$pathId][$levelId][$problemId]))
+    && problemHasNoSolution($pathId, $levelId, $problemId)
+  );
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId is Solution {
+  validate() = problemExists($pathId, $levelId, $problemId);
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/meta {
+  write() = this != null && isCurrentUserProfile($publicId);
+  read() = isCurrentUserProfile($publicId);
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/meta/verified {
+  write() = true;
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/meta/solved {
+  write() = true;
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/meta/taskId {
+  validate() = taskExists($queueId, this);
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/meta/history/$startedAt {
+  validate() = (
+    root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].meta.solved == true
+    && (root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].meta.startedAt + '') == $startedAt
+    && this == duration(root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].meta)
+  );
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/payload {
+  write() = isCurrentUserProfile($publicId);
+  read() = (
+    isCurrentUserProfile($publicId)
+    && root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].meta.solved == false
+  );
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/results {
+  write() = isCurrentUserProfile($publicId) && this == null;
+  read() = isCurrentUserProfile($publicId);
+}
+
+path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/results/$taskId is SolutionResults {
+  write() = (
+    isQueueWorker($queueId)
+    && root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].meta.taskId == $taskId
+  );
+  validate() = isTaskVerify($queueId, $taskId, root.singpath.queuedSolutions[$pathId][$levelId][$problemId][$publicId][$queueId].payload);
+}
+
+path /singpath/queues/$queueId/workers {
+  read() = true;
+}
+
+path /singpath/queues/$queueId/workers/$workerId is Worker {
+  write() = (
+    isQueueWorker($queueId) && (
+      isCurrentUser($workerId)
+      || this == null
+    )
+  );
+}
+
+path /singpath/queues/$queueId/tasks {
+  read() = isQueueWorker($queueId);
+}
+
+path /singpath/queues/$queueId/tasks/$taskId is Task {
+  read() = isCurrentUser(this.owner);
+  write() = (
+    pushingTask(this)
+    || claimingTask($queueId, this)
+    || unclaimingTask($queueId, this)
+    || completingTask(this)
+    || consumingTask(this)
+  );
+}
+
+
 isNew(value) = value != null && prior(value) == null;
-
-isEditing(value) = value != null && prior(value) != value;
-
+isUnchanged(value) = value != null && prior(value) == value;
+isLikeNew(value) = value != null && (prior(value) == null || prior(value) == value);
+isEditing(value) = value != null && prior(value) != null;
 isDeleting(value) = prior(value) != null && value == null;
 
-isCurrentUser(uid) = isLoggedIn() && auth.uid == uid;
-
-isOwner(uid, obj) = root.auth.publicIds[obj.owner.publicId] == uid;
-
 isLoggedIn() = auth != null;
+isCurrentUser(uid) = isLoggedIn() && auth.uid == uid;
+isCurrentUserProfile(publicId) = isLoggedIn() && auth.uid == root.auth.publicIds[publicId];
+isOwner(obj) = (
+  isLoggedIn()
+  && ((obj != null && root.auth.publicIds[obj.owner.publicId] == auth.uid)
+    || (obj == null && root.auth.publicIds[prior(obj.owner.publicId)] == auth.uid)
+  )
+);
+isAppAdmin(app) = isLoggedIn() && root[app].admins[auth.uid] == true;
+isQueueWorker(queueId) = isLoggedIn() && auth.isWorker == true && queueId == auth.queue;
 
 isPublicId(value) = value.matches(/^[-a-z0-9]{3,20}$/);
-
 isPublicIdUsed(id) = root.auth.usedPublicIds[id] == true;
-
 hasClaimedPublicId(uid, id) = root.auth.publicIds[id] == uid;
-
 hasRegisteredPublicId(uid, id) = (
   hasClaimedPublicId(uid, id) 
   && isPublicIdUsed(id)
   && root.auth.users[uid].publicId == id
+);
+
+isUserRefInSync(publicId, userRef)  = (
+  userRef.displayName === root.auth.users[root.auth.publicIds[publicId]].displayName &&
+  userRef.gravatar === root.auth.users[root.auth.publicIds[publicId]].gravatar
+);
+
+isProfileInSync(publicId, profile) = (
+  isUserRefInSync(publicId, profile)
+  && profile.yearOfBirth === root.auth.users[root.auth.publicIds[publicId]].yearOfBirth
+  && (
+    (
+      profile.country == null &&
+      root.auth.users[root.auth.publicIds[publicId]].country == null
+    ) ||
+    profile.country.code === root.auth.users[root.auth.publicIds[publicId]].country.code
+  ) && (
+    (
+      profile.school == null &&
+      root.auth.users[root.auth.publicIds[publicId]].school == null
+    ) ||
+    profile.school.id === root.auth.users[root.auth.publicIds[publicId]].school.id
+  )
+);
+
+pathExists(pathId) = root.singpath.paths[pathId] != null;
+levelExists(pathId, levelId) = root.singpath.levels[pathId][levelId] != null;
+problemExists(pathId, levelId, problemId) = (
+  root.singpath.problems[pathId][levelId][problemId] != null
+);
+solutionExists(pathId, levelId, problemId, queueId, publicId) = (
+  root.singpath.queuedSolutions[pathId][levelId][problemId][publicId][queueId] != null
+);
+
+// Check a path, a level or a problems can be deleted.
+pathHasNoLevel(pathId) = (
+  root.singpath.levels[pathId] == null
+  && root.singpath.problems[pathId] == null
+  && root.singpath.queuedSolutions[pathId] == null
+);
+levelHasNoProblem(pathId, levelId) = (
+  root.singpath.problems[pathId][levelId] == null
+  && root.singpath.queuedSolutions[pathId][levelId] == null
+);
+problemHasNoSolution(pathId, levelId, problemId) = (
+  root.singpath.queuedSolutions[pathId][levelId][problemId] == null
+);
+
+isLevelInSync(pathId, level) = (
+  level.language == root.singpath.paths[pathId].language
+  && level.owner.publicId == root.singpath.paths[pathId].owner.publicId
+);
+
+isProblemInSync(pathId, levelId, problem)  = (
+  problem.language == root.singpath.levels[pathId][levelId].language
+  && problem.owner.publicId == root.singpath.levels[pathId][levelId].owner.publicId
+);
+
+isSolutionInSync(pathId, levelId, problemId, queueId, publicId, solution) = (
+  problemExists(pathId, levelId, problemId)
+  && solution.startedAt == root.singpath.queuedSolutions[pathId][levelId][problemId][publicId][queueId].meta.startedAt
+  && solution.solved == root.singpath.queuedSolutions[pathId][levelId][problemId][publicId][queueId].meta.solved
+  && solution.language == root.singpath.problems[pathId][levelId][problemId].language
+  && (solution.solved == false || solution.duration == root.singpath.queuedSolutions[pathId][levelId][problemId][publicId][queueId].meta.history[solution.startedAt + ''])
+);
+
+solutionIsStarted(solution) = (
+  (prior(solution) == null || problemHasBeenSolved(solution.meta))
+  && solution.meta.startedAt == now
+  && solution.meta.endedAt == null
+  && solution.meta.verified == false
+  && solution.meta.solved == false
+  && solution.meta.taskId == null
+  && solution.meta.history[solution.meta.startedAt + ''] == null
+  && solution.payload == null
+  && solution.results == null
+);
+
+solutionIsSubmitted(solution) = (
+  isUnchanged(solution.meta.startedAt)
+  && solution.meta.endedAt == now
+  && solution.meta.verified == false
+  && solution.meta.solved == false
+  && solution.meta.taskId != null
+  && solution.meta.taskId != prior(solution.meta.taskId)
+  && solution.meta.history[solution.meta.startedAt + ''] == null
+  && solution.payload != null
+  && solution.results[solution.meta.taskId] == null
+);
+
+solutionIsVerified(solution) = (
+  isUnchanged(solution.meta.startedAt)
+  && isUnchanged(solution.meta.endedAt)
+  && solution.meta.verified == true
+  && isUnchanged(solution.meta.taskId)
+  && solution.payload != null
+  && payloadMath(solution.payload, prior(solution.payload))
+  && solution.results[solution.meta.taskId] != null
+);
+
+problemHasBeenSolved(meta) = (
+  prior(meta.solved) == true
+  && meta.history[prior(meta.startedAt) + ''] != null
+);
+
+
+// Initial state of a task.
+// 
+taskIsPushed(task) = (
+  task.started == false
+  && task.completed == false
+  && task.consumed == false
+  && task.worker == null
+  && task.results == null
+  && (task.solutionRef == null || root[task.solutionRef] != null)
+  && (task.solutionRef == null || root[task.solutionRef].results[key()] == null)
+);
+
+// Once the task is claimed.
+// 
+taskIsClaimed(task) = (
+  task.started == true
+  && task.completed == false
+  && task.consumed == false
+  && task.worker != null
+  && task.results == null
+  && (task.solutionRef == null || root[task.solutionRef].results[key()] == null)
+);
+
+// Once the task is completed.
+// 
+// Note that even if the task has a ref solution, we should be able to save 
+// the results in the task itself (in case the solution has trigger a task
+// and can't receive the previous task result)
+taskIsCompleted(task) = (
+  task.started == true
+  && task.completed == true
+  && task.worker != null
+  && task.results == null
+  && task.consumed == (task.solutionRef != null)
+  && (
+    (task.solutionRef != null && root[task.solutionRef].results[key()] != null)
+    || (task.results != null)
+  )
+);
+
+// For task unrelated to a user solution, the client set it as consumed
+// once it fetch the result.
+taskIsConsumed(task) = (
+  task.started == true
+  && task.completed == true
+  && task.worker != null
+  && task.consumed == true
+  && task.results != null
+);
+
+// Only the owner can push the solution, and it can't 
+pushingTask(task) = (
+  prior(task) == null
+  && taskIsPushed(task)
+  && isCurrentUser(task.owner)
+);
+
+// Only the claiming worker can claim it
+claimingTask(queue, task) = (
+  prior(task) != null
+  && prior(task.started) == false
+  && prior(task.worker) == null
+  && taskIsClaimed(task)
+  && isQueueWorker(queue)
+  && isCurrentUser(task.worker)
+);
+
+// any worker can unclaim a task (in case a previous worker crashed)
+unclaimingTask(queue, task) = (
+  prior(task) != null
+  && prior(task.started) == true
+  && taskIsPushed(task)
+  && (
+    isCurrentUser(prior(task.worker))
+    || (
+      isQueueWorker(queue)
+      && (now - prior(task.startedAt)) > 6000
+    )
+  )
+);
+
+// Only the worker having the claim can complete it
+completingTask(task) = (
+  prior(task) != null
+  && prior(task.completed) == false
+  && prior(task.started) == true
+  && prior(task.worker) == task.worker
+  && taskIsCompleted(task)
+  && isCurrentUser(task.worker)
+);
+
+// The client set it as consumed
+consumingTask(task) = (
+  prior(task) != null
+  && prior(task.consumed) == false
+  && taskIsConsumed(task)
+  && isCurrentUser(task.owner)
+);
+
+duration(obj) = (
+  obj.endedAt - obj.startedAt
+);
+
+taskExists(queueId, taskId) = (
+  root.singpath.queues[queueId].tasks[taskId] != null
+);
+
+payloadMath(a, b) {
+  a != null
+  && a.language == b.language
+  && a.tests == b.tests
+  && a.solution == b.solution
+}
+
+isTaskVerify(queueId, taskId, payload) = (
+  taskExists(queueId, taskId)
+  && root.singpath.queues[queueId].tasks[taskId].completed == true
+  && payloadMath(root.singpath.queues[queueId].tasks[taskId].payload, payload)
 );

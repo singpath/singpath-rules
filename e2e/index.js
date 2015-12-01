@@ -1,3 +1,4 @@
 'use strict';
 
-require('./auth');
+// require('./auth');
+require('./singpath');
