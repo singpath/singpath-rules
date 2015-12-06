@@ -9,7 +9,6 @@
 # - Automatic variables (like $@): https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 #
 
-
 default: rules.json
 .PHONY: default
 
@@ -20,7 +19,11 @@ default: rules.json
 	# 
 	#   export SINGPATH_RULES_FB_ID=singpath-dev"
 	#   
-	npm run upload-rules
+	if test -z "$$SINGPATH_DEPLOY_TOKEN"; then \
+		npm run upload-rules;\
+	else \
+		npm run upload-rules -- --token "$$SINGPATH_DEPLOY_TOKEN"; \
+	fi;
 	date > $@
 
 .upload-data.${SINGPATH_RULES_FB_ID}.stamp: ./data/classMentors/*.json
