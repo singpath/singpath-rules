@@ -10,4 +10,6 @@ install:
 - npm install
 script:
 - make test
-- test -z "$SINGPATH_RULES_FB_SECRET" || echo '{}' > extra-rules.json && make e2e
+- npm run all-rules
+- test -z "$SINGPATH_DEPLOY_TOKEN" || npm run upload-rules-ci
+- test -z "$SINGPATH_RULES_FB_SECRET" || npm run test-e2e

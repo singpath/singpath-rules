@@ -13,6 +13,7 @@
     "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
     "test-e2e": "mocha e2e/index.js",
     "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID",
+    "upload-rules-ci": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID --token \"$SINGPATH_DEPLOY_TOKEN\"",
     "upload-data": "npm run upload-data-badges && npm run upload-data-schools",
     "upload-data-badges": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/badges data/classMentors/badges.json",
     "upload-data-schools": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/schools data/classMentors/schools.json"
