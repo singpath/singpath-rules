@@ -6,11 +6,16 @@
   "scripts": {
     "all-rules": "npm run rules && mv rules.json new-rules.json && ./bin/merge-rules extra-rules.json new-rules.json > rules.json && rm new-rules.json",
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "data-badges": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/badges -o data/classMentors/badges.json",
+    "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
     "lint": "eslint src/ tests/ e2e/",
     "rules": "cat rules/*.bolt | ./node_modules/.bin/firebase-bolt > rules.json",
     "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
     "test-e2e": "mocha e2e/index.js",
-    "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID"
+    "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID",
+    "upload-data": "npm run upload-data-badges && npm run upload-data-schools",
+    "upload-data-badges": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/badges data/classMentors/badges.json",
+    "upload-data-schools": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/schools data/classMentors/schools.json"
   },
   "repository": {
     "type": "git",
