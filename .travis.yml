@@ -13,4 +13,4 @@ install:
 
 script:
 - make test
-- test -z "$SINGPATH_RULES_FB_SECRET" || make e2e
+- test -z "$SINGPATH_RULES_FB_SECRET" || echo '{}' > extra-rules.json && make e2e
