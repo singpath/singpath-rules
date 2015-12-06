@@ -1,5 +1,5 @@
 {
-  "firebase": "singpath-dev",
+  "firebase": "singpath-travis",
   "public": "public",
   "rules": "rules.json",
   "ignore": [

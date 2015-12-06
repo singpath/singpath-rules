@@ -25,7 +25,11 @@ function loadRule(path) {
       }
     });
   }).then(
-    data => JSON.parse(data)
+    data => JSON.parse(data),
+    err => {
+      console.warn(err.toString());
+      return {};
+    }
   ).then(
     doc => doc.rules || {}
   );
