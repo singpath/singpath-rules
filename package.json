@@ -4,11 +4,13 @@
   "description": "Firebase Rules for Singpath.com DB",
   "main": "src/index.js",
   "scripts": {
+    "all-rules": "npm run rules && mv rules.json new-rules.json && ./bin/merge-rules extra-rules.json new-rules.json > rules.json && rm new-rules.json",
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "lint": "eslint src/ tests/ e2e/",
-    "make-rules": "firebase-bolt < rules.bolt > new-rules.json && ./bin/merge-rules extra-rules.json new-rules.json > rules.json && rm new-rules.json",
+    "rules": "cat rules/*.bolt | ./node_modules/.bin/firebase-bolt > rules.json",
     "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
-    "test-e2e": "eslint src/ tests/ e2e/ && firebase-bolt rules.bolt && firebase deploy:rules -f $SINGPATH_RULES_FB_ID && mocha e2e/index.js"
+    "test-e2e": "mocha e2e/index.js",
+    "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID"
   },
   "repository": {
     "type": "git",

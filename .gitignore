@@ -8,3 +8,4 @@ extra-rules.json
 rules.json
 
 # Secrets for testing
+.upload.stamp

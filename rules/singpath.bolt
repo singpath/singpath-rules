@@ -1,71 +1,6 @@
-type AuthId extends String {
-  validate() = this.matches(/^[-a-zA-Z0-9]+$/);
-}
-
-type BirthYear extends Number {
-  validate() = this > 1900 && this < 2015;
-}
-
-type Description extends String {
-  validate() = this.length >= 1 && this.length <= 2048;
-}
-
-type Email extends String {
-  validate() = this.matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/);
-}
-
-type FullName extends String {
-  validate() = this.length >= 3;
-}
-
-type InitialTimeStamp extends Number {
-  validate() = (prior(this) == null && this == now) || isUnchanged(this);
-}
-
-type Language extends String {
-  validate() = this.matches(/^(python3?|angularjs|javascript|java)$/);
-}
-
-type Name extends String {
-  validate() = this.length >= 3 && this.length <= 64;
-}
-
-type PublicId extends String {
-  validate() = isPublicId(this);
-}
-
-type ProblemSolution extends String {
-  validate() = this.length >= 1 && this.length <= 8192;
-}
-
-type ProblemTest extends String {
-  validate() = this.length >= 1 && this.length <= 4096;
-}
-
-type TimeStamp extends Number {
-  validate() = this == now;
-}
-
-type Title extends String {
-  validate() = this.length >= 3 && this.length <= 64;
-}
-
-type URL extends String {
-  validate() = this.matches(/^(https?\:)?\/\/.+$/);
-}
-
-type Country {
-  code: String,
-  name: String,
-}
-
-type School {
-  id: String,
-  name: String,
-  type: String,
-
-  iconUrl: String | Null,
-}
+/**
+ * Sinpath app rules
+ */
 
 type Path {
   title: Title,
@@ -91,16 +26,12 @@ type Problem {
   seed: ProblemTest | Null,
 }
 
+type ProblemSolution extends String {
+  validate() = this.length >= 1 && this.length <= 8192;
+}
 
-type Profile {
-  displayName: Name,
-  gravatar: URL,
-
-  country: Country | Null,
-  yearOfBirth: BirthYear | Null,
-  school: School | Null,
-  isAdmin: Boolean | Null,
-  isPremium: Boolean | Null
+type ProblemTest extends String {
+  validate() = this.length >= 1 && this.length <= 4096;
 }
 
 type SingPathProfile {
@@ -178,83 +109,11 @@ type Task {
   results: SolutionResults | Null,
 }
 
-type User {
-  validate() = key() == this.id && hasRegisteredPublicId(this.id, this.publicId);
-
-  id: String,
-  publicId: PublicId,
-  fullName: FullName,
-  displayName: Name,
-  email: Email,
-  gravatar: URL,
-  createdAt: InitialTimeStamp,
-
-  country: Country | Null,
-  yearOfBirth: BirthYear | Null,  
-  school: School | Null,
-}
-
-type UserRef {
-  validate() = isUserRefInSync(this.publicId, this);
-
-  publicId: PublicId,
-  displayName: Name,
-  gravatar: URL
-}
-
 type Worker {
   startedAt: InitialTimeStamp,
   presence: TimeStamp,
 }
 
-
-
-path / {
-  read() = false;
-  write() = false;
-}
-
-path /auth/publicIds/$publicId is AuthId {
-  write() = isCurrentUser(this) && isNew(this);
-  validate() = isPublicId(key()) && hasRegisteredPublicId(this, key());
-}
-
-path /auth/usedPublicIds {
-  read() = true;
-}
-
-path /auth/usedPublicIds/$publicId is Boolean {
-  write() = this != null;
-  validate() = this == (root.auth.publicIds[$publicId] != null);
-}
-
-path /auth/users/$userId is User {
-  write() = this != null && isCurrentUser($userId);
-  read() = isCurrentUser($userId);
-}
-
-path /singpath/admin is Map<AuthId, Boolean> {
-  read() = false;
-  write() = false;
-}
-
-path /singpath/userProfiles {
-  read() = true;
-}
-
-path /singpath/userProfiles/$publicId is SingPathProfile;
-
-path /singpath/userProfiles/$publicId/user is Profile {
-  write() = isCurrentUserProfile($publicId);
-  validate() = isProfileInSync($publicId, this) && (
-    this.isAdmin == null || this.isAdmin == isAppAdmin('singpath')
-  );
-}
-
-path /singpath/userProfiles/$publicId/queuedSolutions/$pathId/$levelId/$problemId/$queueId is SolutionRef {
-  write() = (this != null) == solutionExists($pathId, $levelId, $problemId, $queueId, $publicId);
-  validate() = isSolutionInSync($pathId, $levelId, $problemId, $queueId, $publicId, this);
-}
 
 path /singpath/paths {
   read() = true;
@@ -314,7 +173,28 @@ path /singpath/problems/$pathId/$levelId/$problemId is Problem {
   );
   validate() = levelExists($pathId, $levelId) && isProblemInSync($pathId, $levelId, this);
 }
+path /singpath/admin is Map<AuthId, Boolean> {
+  read() = false;
+  write() = false;
+}
 
+path /singpath/userProfiles {
+  read() = true;
+}
+
+path /singpath/userProfiles/$publicId is SingPathProfile;
+
+path /singpath/userProfiles/$publicId/user is Profile {
+  write() = isCurrentUserProfile($publicId);
+  validate() = isProfileInSync($publicId, this) && (
+    this.isAdmin == null || this.isAdmin == isAppAdmin('singpath')
+  );
+}
+
+path /singpath/userProfiles/$publicId/queuedSolutions/$pathId/$levelId/$problemId/$queueId is SolutionRef {
+  write() = (this != null) == solutionExists($pathId, $levelId, $problemId, $queueId, $publicId);
+  validate() = isSolutionInSync($pathId, $levelId, $problemId, $queueId, $publicId, this);
+}
 path /singpath/queuedSolutions/$pathId {
   write() = (
     this == null
@@ -417,62 +297,24 @@ path /singpath/queues/$queueId/tasks/$taskId is Task {
   );
 }
 
-
-isNew(value) = value != null && prior(value) == null;
-isUnchanged(value) = value != null && prior(value) == value;
-isLikeNew(value) = value != null && (prior(value) == null || prior(value) == value);
-isEditing(value) = value != null && prior(value) != null;
-isDeleting(value) = prior(value) != null && value == null;
-
-isLoggedIn() = auth != null;
-isCurrentUser(uid) = isLoggedIn() && auth.uid == uid;
-isCurrentUserProfile(publicId) = isLoggedIn() && auth.uid == root.auth.publicIds[publicId];
-isOwner(obj) = (
+isQueueWorker(queueId) = (
   isLoggedIn()
-  && ((obj != null && root.auth.publicIds[obj.owner.publicId] == auth.uid)
-    || (obj == null && root.auth.publicIds[prior(obj.owner.publicId)] == auth.uid)
-  )
-);
-isAppAdmin(app) = isLoggedIn() && root[app].admins[auth.uid] == true;
-isQueueWorker(queueId) = isLoggedIn() && auth.isWorker == true && queueId == auth.queue;
-
-isPublicId(value) = value.matches(/^[-a-z0-9]{3,20}$/);
-isPublicIdUsed(id) = root.auth.usedPublicIds[id] == true;
-hasClaimedPublicId(uid, id) = root.auth.publicIds[id] == uid;
-hasRegisteredPublicId(uid, id) = (
-  hasClaimedPublicId(uid, id) 
-  && isPublicIdUsed(id)
-  && root.auth.users[uid].publicId == id
+  && auth.isWorker == true
+  && queueId == auth.queue
 );
 
-isUserRefInSync(publicId, userRef)  = (
-  userRef.displayName === root.auth.users[root.auth.publicIds[publicId]].displayName &&
-  userRef.gravatar === root.auth.users[root.auth.publicIds[publicId]].gravatar
+pathExists(pathId) = (
+  root.singpath.paths[pathId] != null
 );
 
-isProfileInSync(publicId, profile) = (
-  isUserRefInSync(publicId, profile)
-  && profile.yearOfBirth === root.auth.users[root.auth.publicIds[publicId]].yearOfBirth
-  && (
-    (
-      profile.country == null &&
-      root.auth.users[root.auth.publicIds[publicId]].country == null
-    ) ||
-    profile.country.code === root.auth.users[root.auth.publicIds[publicId]].country.code
-  ) && (
-    (
-      profile.school == null &&
-      root.auth.users[root.auth.publicIds[publicId]].school == null
-    ) ||
-    profile.school.id === root.auth.users[root.auth.publicIds[publicId]].school.id
-  )
+levelExists(pathId, levelId) = (
+  root.singpath.levels[pathId][levelId] != null
 );
 
-pathExists(pathId) = root.singpath.paths[pathId] != null;
-levelExists(pathId, levelId) = root.singpath.levels[pathId][levelId] != null;
 problemExists(pathId, levelId, problemId) = (
   root.singpath.problems[pathId][levelId][problemId] != null
 );
+
 solutionExists(pathId, levelId, problemId, queueId, publicId) = (
   root.singpath.queuedSolutions[pathId][levelId][problemId][publicId][queueId] != null
 );
@@ -646,10 +488,6 @@ consumingTask(task) = (
   && prior(task.consumed) == false
   && taskIsConsumed(task)
   && isCurrentUser(task.owner)
-);
-
-duration(obj) = (
-  obj.endedAt - obj.startedAt
 );
 
 taskExists(queueId, taskId) = (
