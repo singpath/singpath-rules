@@ -1,0 +1,10 @@
+{
+  "firebase": "singpath-dev",
+  "public": "public",
+  "rules": "rules.json",
+  "ignore": [
+    "firebase.json",
+    "**/.*",
+    "**/node_modules/**"
+  ]
+}

@@ -1,0 +1,112 @@
+/**
+ * Defines the /auth path and the apps' profile shared properties.
+ * 
+ */
+
+type Country {
+  code: String,
+  name: String,
+}
+
+type School {
+  id: String,
+  name: String,
+  type: String,
+
+  iconUrl: String | Null,
+}
+
+type Profile {
+  displayName: Name,
+  gravatar: URL,
+
+  country: Country | Null,
+  yearOfBirth: BirthYear | Null,
+  school: School | Null,
+  isAdmin: Boolean | Null,
+  isPremium: Boolean | Null
+}
+
+type User {
+  validate() = key() == this.id && hasRegisteredPublicId(this.id, this.publicId);
+
+  id: String,
+  publicId: PublicId,
+  fullName: FullName,
+  displayName: Name,
+  email: Email,
+  gravatar: URL,
+  createdAt: InitialTimeStamp,
+
+  country: Country | Null,
+  yearOfBirth: BirthYear | Null,  
+  school: School | Null,
+}
+
+type UserRef {
+  validate() = isUserRefInSync(this.publicId, this);
+
+  publicId: PublicId,
+  displayName: Name,
+  gravatar: URL
+}
+
+path /auth/publicIds/$publicId is AuthId {
+  write() = isCurrentUser(this) && isNew(this);
+  validate() = isPublicId(key()) && hasRegisteredPublicId(this, key());
+}
+
+path /auth/usedPublicIds {
+  read() = true;
+}
+
+path /auth/usedPublicIds/$publicId is Boolean {
+  write() = this != null;
+  validate() = this == (root.auth.publicIds[$publicId] != null);
+}
+
+path /auth/users/$userId is User {
+  write() = this != null && isCurrentUser($userId);
+  read() = isCurrentUser($userId);
+}
+
+isLoggedIn() = auth != null;
+isCurrentUser(uid) = isLoggedIn() && auth.uid == uid;
+isCurrentUserProfile(publicId) = isLoggedIn() && auth.uid == root.auth.publicIds[publicId];
+isOwner(obj) = (
+  isLoggedIn()
+  && ((obj != null && root.auth.publicIds[obj.owner.publicId] == auth.uid)
+    || (obj == null && root.auth.publicIds[prior(obj.owner.publicId)] == auth.uid)
+  )
+);
+isAppAdmin(app) = isLoggedIn() && root[app].admins[auth.uid] == true;
+
+hasClaimedPublicId(uid, id) = root.auth.publicIds[id] == uid;
+hasRegisteredPublicId(uid, id) = (
+  hasClaimedPublicId(uid, id) 
+  && isPublicIdUsed(id)
+  && root.auth.users[uid].publicId == id
+);
+
+isUserRefInSync(publicId, userRef)  = (
+  userRef.displayName === root.auth.users[root.auth.publicIds[publicId]].displayName &&
+  userRef.gravatar === root.auth.users[root.auth.publicIds[publicId]].gravatar
+);
+
+isProfileInSync(publicId, profile) = (
+  isUserRefInSync(publicId, profile)
+  && profile.yearOfBirth === root.auth.users[root.auth.publicIds[publicId]].yearOfBirth
+  && (
+    (
+      profile.country == null &&
+      root.auth.users[root.auth.publicIds[publicId]].country == null
+    ) ||
+    profile.country.code === root.auth.users[root.auth.publicIds[publicId]].country.code
+  ) && (
+    (
+      profile.school == null &&
+      root.auth.users[root.auth.publicIds[publicId]].school == null
+    ) ||
+    profile.school.id === root.auth.users[root.auth.publicIds[publicId]].school.id
+  )
+);

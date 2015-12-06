@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+/*eslint no-console: 0*/
+
+const fs = require('fs');
+
+
+Promise.all(
+  process.argv.slice(2).map(loadRule)
+).then(
+  rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
+).then(
+  rules => console.log(JSON.stringify({rules}, null, '  '))
+).catch(
+  err => console.error(err.toString())
+);
+
+
+function loadRule(path) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  }).then(
+    data => JSON.parse(data)
+  ).then(
+    doc => doc.rules || {}
+  );
+}

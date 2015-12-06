@@ -1,0 +1,11 @@
+node_modules/**
+coverage/**
+
+# Put private rules in this file
+extra-rules.json
+
+# Built with npm run make-rules
+rules.json
+
+# Secrets for testing
+*.stamp

@@ -1,0 +1,45 @@
+{
+  "name": "singpath-rules",
+  "version": "1.0.0-alpha1",
+  "description": "Firebase Rules for Singpath.com DB",
+  "main": "src/index.js",
+  "scripts": {
+    "all-rules": "npm run rules && mv rules.json new-rules.json && ./bin/merge-rules extra-rules.json new-rules.json > rules.json && rm new-rules.json",
+    "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "data-badges": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/badges -o data/classMentors/badges.json",
+    "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
+    "lint": "eslint src/ tests/ e2e/",
+    "rules": "cat rules/*.bolt | ./node_modules/.bin/firebase-bolt > rules.json",
+    "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
+    "test-e2e": "mocha e2e/index.js",
+    "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID",
+    "upload-data": "npm run upload-data-badges && npm run upload-data-schools",
+    "upload-data-badges": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/badges data/classMentors/badges.json",
+    "upload-data-schools": "firebase data:set -f $SINGPATH_RULES_FB_ID /classMentors/schools data/classMentors/schools.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/singpath/firebase-rules.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/singpath/firebase-rules/issues"
+  },
+  "homepage": "https://github.com/singpath/firebase-rules#readme",
+  "devDependencies": {
+    "coveralls": "^2.11.4",
+    "eslint": "^1.8.0",
+    "expect.js": "^0.3.1",
+    "firebase-test": "^0.1.0",
+    "istanbul": "^0.4.1",
+    "mocha": "^2.3.3",
+    "mocha-lcov-reporter": "^1.0.0"
+  },
+  "dependencies": {
+    "firebase": "^2.3.1",
+    "firebase-bolt": "^0.5.0",
+    "firebase-token-generator": "^2.0.0",
+    "firebase-tools": "^2.1.0"
+  }
+}

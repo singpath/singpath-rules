@@ -1,0 +1,16 @@
+language: node_js
+
+env:
+  global:
+    - secure: E0CJdA0Fuu2fJe2UbPfAr3NU+Ijgwz7kcNfWJB3hHGYOcBvS38znLvV4Oo+lWUwRQdXTrQB/awDIs49Met2VCJd47tlY4ckpPmsFW8agRiCJy3Okw/Uv21CYOfoIV5hBjZtspcvZRNF+5duVjk9civCEen8ibfcK4qr0+rHggsr+ctOQ4CjrKfsDbGof8AWP7QZVUm9A7VyzUh2ZBsEwaVBkmZQeot4joZIjyDPH2gJFJyZBkMMft9BVOLieEJyi4ckJOmIFt8pO+Ajjt/86aPx7+GDrkecZ7ReCflBlA0dkr51Wmtx2lolvJS2C9kHjdkUBw0du0DTZEB8O+ppODLsGmIARbbC7pjTMYkKp+tKMccyNLvSxzrhALjVazLPwFxFsMpE7NUL9veKyHQNfYZpBUDMAkQJH7ODC/0OkWQwfW81L1I0MjRGV+pNmyVlhidEgMeFIGrV8r0XthtbxIYwJ0gZ8Tl3VmYzobfa3COkzAL7X4DbC8bEqjRxs+QchKTUSx4hk1kPHI4NYdJ7D9OSm9/WVUm5wrnZhK3ZrYzlcXNtuyU3Iwfkfx/1mMbdbY+kZDtCuv1ZQm2tTcLnB9aMBPrLjGo8XHbitoed+3riXM+x4QjKby92Ya4XKq6XOF9Uek5egCnoMEZnPU4wntN50wjR9C1QFpKK3rUETHOw=
+    - SINGPATH_RULES_FB_ID=singpath-travis
+
+node_js:
+- '4.1'
+
+install:
+- npm install
+
+script:
+- make test
+- test -z "$SINGPATH_RULES_FB_SECRET" || make e2e

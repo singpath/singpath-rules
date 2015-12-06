@@ -1,0 +1,63 @@
+/**
+ * Types and functions shared across the 2 apps.
+ * 
+ */
+
+type AuthId extends String {
+  validate() = this.matches(/^[-a-zA-Z0-9]+$/);
+}
+
+type BirthYear extends Number {
+  validate() = this > 1900 && this < 2015;
+}
+
+type Description extends String {
+  validate() = this.length >= 1 && this.length <= 2048;
+}
+
+type Email extends String {
+  validate() = this.matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/);
+}
+
+type FullName extends String {
+  validate() = this.length >= 3;
+}
+
+type InitialTimeStamp extends Number {
+  validate() = (prior(this) == null && this == now) || isUnchanged(this);
+}
+
+type Language extends String {
+  validate() = this.matches(/^(python3?|angularjs|javascript|java)$/);
+}
+
+type Name extends String {
+  validate() = this.length >= 3 && this.length <= 64;
+}
+
+type PublicId extends String {
+  validate() = isPublicId(this);
+}
+
+type TimeStamp extends Number {
+  validate() = this == now;
+}
+
+type Title extends String {
+  validate() = this.length >= 3 && this.length <= 64;
+}
+
+type URL extends String {
+  validate() = this.matches(/^(https?\:)?\/\/.+$/);
+}
+
+isPublicId(value) = value.matches(/^[-a-z0-9]{3,20}$/);
+isPublicIdUsed(id) = root.auth.usedPublicIds[id] == true;
+
+isNew(value) = value != null && prior(value) == null;
+isUnchanged(value) = value != null && prior(value) == value;
+isLikeNew(value) = value != null && (prior(value) == null || prior(value) == value);
+isEditing(value) = value != null && prior(value) != null;
+isDeleting(value) = prior(value) != null && value == null;
+
+duration(obj) = obj.endedAt - obj.startedAt;
