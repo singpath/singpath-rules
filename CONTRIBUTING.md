@@ -16,9 +16,9 @@ supports.
 [Fork](https://github.com/singpath/firebase-rules#fork-destination-box) and
 clone your repository:
 ```
-git clone git@github.com:your-github-id/firebase-rules.git
+git clone git@github.com:your-github-id/singpath-rules.git
 cd firebase-rules
-git remote add upstream https://github.com/singpath/firebase-rules.git
+git remote add upstream https://github.com/singpath/singpath-rules.git
 npm install
 ```
 
@@ -121,3 +121,4 @@ enabled.
 
 The debug info will be the same than one given in firebase simulator tab,
 expect that it works for any type or request (including updates).
+

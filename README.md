@@ -1,8 +1,8 @@
 # firebase-rules
 
-[![Build Status](https://travis-ci.org/singpath/firebase-rules.svg)](https://travis-ci.org/singpath/firebase-rules)
+[![Build Status](https://travis-ci.org/singpath/singpath-rules.svg)](https://travis-ci.org/singpath/singpath-rules)
 
-Rules and migration scripts for Singpath Firbase db
+Rules and migration scripts for Singpath Firbase db.
 
 ## Setup
 
@@ -15,7 +15,7 @@ EXPORT SINGPATH_RULES_FB_ID=singpath-testing-db-id
 
 Clone this repository and install dependencies:
 ```shell
-git clone https://github.com/singpath/firebase-rules.git
+git clone https://github.com/singpath/singpath-rules.git
 cd firebase-rules
 npm install
 ```
