@@ -104,6 +104,72 @@ describe('migrate', () => {
 
     });
 
+    describe('next', () => {
+      const makeRoutine = version => {
+        return {
+          version: version,
+          upgrade: sinon.stub().returns(Promise.resolve(version))
+        };
+      };
+      let upgrader;
+
+      beforeEach(() => {
+        upgrader = migrate.upgrader(ref, 'some-token');
+        sinon.stub(upgrader, 'version').returns(Promise.resolve(0));
+        sinon.stub(upgrader, 'bump').returns(Promise.resolve());
+      });
+
+      it('should return promise resolving to the current version if there are not any upgrade routines', done => {
+        upgrader.routines = [];
+        upgrader.next().then(version => {
+          expect(version).to.be(0);
+          done();
+        }).catch(done);
+      });
+
+      it('should run the next routine', done => {
+        upgrader.routines = [6, 0, 5, 4].map(v => makeRoutine(v));
+        const expected = upgrader.routines[3];
+
+        upgrader.version.returns(Promise.resolve(1));
+        upgrader.bump.returns(Promise.resolve(expected.version));
+
+        upgrader.next().then(() => {
+          sinon.assert.calledOnce(expected.upgrade);
+          sinon.assert.calledWithExactly(expected.upgrade, upgrader.ref, upgrader.token);
+          done();
+        }).catch(done);
+      });
+
+      it('should run bump version to the routine version', done => {
+        upgrader.routines = [6, 0, 5, 4].map(v => makeRoutine(v));
+        const expected = upgrader.routines[3];
+
+        upgrader.version.returns(Promise.resolve(1));
+        upgrader.bump.returns(Promise.resolve(expected.version));
+
+        upgrader.next().then(() => {
+          sinon.assert.calledOnce(upgrader.bump);
+          sinon.assert.calledWithExactly(upgrader.bump, expected.version);
+          done();
+        }).catch(done);
+      });
+
+      it('should resolve to the bumped version', done => {
+        upgrader.routines = [6, 0, 5, 4].map(v => makeRoutine(v));
+        const expected = upgrader.routines[3];
+
+        upgrader.version.returns(Promise.resolve(1));
+        upgrader.bump.returns(Promise.resolve(expected.version));
+
+        upgrader.next().then(version => {
+          expect(version).to.be(expected.version);
+          done();
+        }).catch(done);
+      });
+
+    });
+
   });
 
 });

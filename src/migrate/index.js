@@ -38,13 +38,17 @@ class Upgrader {
   next() {
     this.routines.sort(r => r.version);
 
-    return this.version().then(
-      version => this.routines.filter(r => r.version > version).slice(0, 1).pop()
-    ).then(
-      routine => routine.start(this.ref, this.token)
-    ).then(
-      version => this.bump(version)
-    );
+    return this.version().then(version => {
+      const nextRoutine = this.routines.filter(r => r.version > version).slice(0, 1).pop();
+
+      if (nextRoutine == null) {
+        return version;
+      }
+
+      return nextRoutine.upgrade(this.ref, this.token).then(
+        newVersion => this.bump(newVersion)
+      );
+    });
   }
 }
 

@@ -6,7 +6,7 @@ const rest = require('../rest');
 const version = 1;
 
 
-class Migrate {
+const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token) {
     let baseUri;
@@ -169,7 +169,7 @@ class Migrate {
 
     return this.client.get(path);
   }
-}
+};
 
 exports.version = version;
-exports.migrate = (src, token, dest) => new Migrate(src, token, dest);
+exports.upgrade = (src, token) => new Upgrader(src, token).start();
