@@ -9,6 +9,7 @@ node_js:
 install:
 - npm install
 script:
-- make test
+- npm test
+- npm run coveralls
 - test -z "$SINGPATH_DEPLOY_TOKEN" || npm run upload-rules-ci
 - test -z "$SINGPATH_RULES_FB_SECRET" || npm run test-e2e
