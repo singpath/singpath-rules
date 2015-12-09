@@ -763,6 +763,28 @@ describe('migrate/solutions', () => {
       });
     });
 
+    describe('start', () => {
+
+      it('should miprate path problems', done => {
+        sinon.stub(upgrader, 'migratePaths').returns(Promise.resolve());
+
+        upgrader.start().then(() => {
+          sinon.assert.calledOnce(upgrader.migratePaths);
+          done();
+        }).catch(done);
+      });
+
+      it('should resolve to the migration version', done => {
+        sinon.stub(upgrader, 'migratePaths').returns(Promise.resolve());
+
+        upgrader.start().then(version => {
+          expect(version).to.be(migrateSolutions.version);
+          done();
+        }).catch(done);
+      });
+
+    });
+
   });
 
 });
