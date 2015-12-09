@@ -21,16 +21,6 @@ default: rules.json
 	#   
 	npm run upload-rules
 
-.upload-data.${SINGPATH_RULES_FB_ID}.stamp: ./data/classMentors/*.json
-	# SINGPATH_RULES_FB_ID should be set.
-	# 
-	# example:
-	# 
-	#   export SINGPATH_RULES_FB_ID=singpath-dev"
-	#   
-	npm run upload-data
-	date > $@
-
 rules.json: rules/*.bolt extra-rules.json
 	npm run all-rules
 
@@ -54,6 +44,3 @@ test:
 
 upload-rules: .upload-rules.${SINGPATH_RULES_FB_ID}.stamp
 .PHONY: upload-rules
-
-upload-data: .upload-data.${SINGPATH_RULES_FB_ID}.stamp
-.PHONY: upload-data

@@ -1,6 +1,7 @@
 # firebase-rules
 
 [![Build Status](https://travis-ci.org/singpath/singpath-rules.svg)](https://travis-ci.org/singpath/singpath-rules)
+[![Coverage Status](https://coveralls.io/repos/singpath/singpath-rules/badge.svg?branch=master&service=github)](https://coveralls.io/github/singpath/singpath-rules?branch=master)
 
 Rules and migration scripts for Singpath Firbase db.
 
