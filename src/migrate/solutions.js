@@ -9,11 +9,11 @@ const version = 1;
 const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token) {
-    let baseUri;
+    const root = ref.root();
+    const baseUri = root.toString();
 
-    this.dest = ref.root();
-    baseUri = this.dest.toString();
-
+    this.dest = root.child('singpath');
+    this.taskDest = root.child('singpath/queues/default/tasks');
     this.client = rest.client(baseUri, token);
   }
 
@@ -26,15 +26,18 @@ const Upgrader = exports.Upgrader = class Upgrader {
       meta: {
         startedAt: resolution.startedAt,
         endedAt: resolution.endedAt || null,
-        verified: resolution.output !== null,
-        solved: resolution.output && resolution.output.solved,
-        taskId: resolution.output != null ? 'migrate-version-1' : null
+        verified: resolution.output !== undefined,
+        solved: resolution.output && resolution.output.solved || false
       },
-      payload: payload,
-      results: {
-        'migrate-version-1': resolution.output != null ? resolution.output : null
-      }
+      payload: payload
     };
+
+    if (solution.meta.verified) {
+      solution.meta.taskId = 'migrate-version-1';
+      solution.results = {
+        'migrate-version-1': resolution.output
+      };
+    }
 
     if (solution.meta.solved) {
       solution.meta.history = {
@@ -43,15 +46,6 @@ const Upgrader = exports.Upgrader = class Upgrader {
     }
 
     return Promise.resolve(solution);
-  }
-
-  solutionRef(solution) {
-    return {
-      startedAt: solution.meta.startedAt,
-      duration: solution.meta.solved ? solution.meta.history[solution.meta.startedAt] : null,
-      language: solution.payload.language,
-      solved: solution.meta.solved
-    };
   }
 
   task(pathId, levelId, problemId, publicId, solution) {
@@ -68,6 +62,20 @@ const Upgrader = exports.Upgrader = class Upgrader {
     });
   }
 
+  solutionRef(solution) {
+    const ref = {
+      startedAt: solution.meta.startedAt,
+      language: solution.payload.language,
+      solved: solution.meta.solved
+    };
+
+    if (solution.meta.solved) {
+      ref.duration = solution.meta.history[solution.meta.startedAt];
+    }
+
+    return ref;
+  }
+
   saveSolution(pathId, levelId, problemId, publicId, solution) {
     if (solution.meta.verified) {
       return this.saveVerifiedSolution(pathId, levelId, problemId, publicId, solution);
@@ -77,20 +85,36 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   saveVerifiedSolution(pathId, levelId, problemId, publicId, solution) {
-    return this.dest.update('/singpath', {
-      [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-      [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
+    return new Promise((resolve, reject) => {
+      this.dest.update({
+        [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
+        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
+      }, err => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
   }
 
   saveSolutionAndTask(pathId, levelId, problemId, publicId, solution) {
     return this.task(pathId, levelId, problemId, publicId, solution).then(task => {
-      const taskId = solution.meta.taskId = this.dest.push(`/singpath/queues/default/tasks`);
+      const taskId = solution.meta.taskId = this.taskDest.push();
 
-      return this.dest.update('/singpath', {
-        [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution),
-        [`queues/default/tasks/${taskId}`]: task
+      return new Promise((resolve, reject) => {
+        this.dest.update({
+          [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
+          [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution),
+          [`queues/default/tasks/${taskId}`]: task
+        }, err => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
     });
   }
@@ -161,13 +185,13 @@ const Upgrader = exports.Upgrader = class Upgrader {
   solutions(pathId, levelId, problemId) {
     const path = `singpath/solutions/${pathId}/${levelId}/${problemId}`;
 
-    return this.client.get(path);
+    return this.client.get(path).then(solutions => solutions || {});
   }
 
   resolutions(pathId, levelId, problemId) {
     const path = `singpath/resolutions/${pathId}/${levelId}/${problemId}`;
 
-    return this.client.get(path);
+    return this.client.get(path).then(resolutions => resolutions || {});
   }
 };
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const queued_solutions = require('./queued_solutions');
+const migrateSolutions = require('./solutions');
 
 
 class Upgrader {
@@ -9,7 +9,7 @@ class Upgrader {
     this.ref = ref.root().child('meta/version');
     this.token = token;
     this.routines = [
-      queued_solutions
+      migrateSolutions
     ];
   }
 

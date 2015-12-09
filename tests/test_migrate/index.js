@@ -1,5 +1,8 @@
 'use strict';
 
+require('./test_migrate_solutions');
+
+
 const expect = require('expect.js');
 const sinon = require('sinon');
 const migrate = require('../../src/migrate');
@@ -166,6 +169,23 @@ describe('migrate', () => {
           expect(version).to.be(expected.version);
           done();
         }).catch(done);
+      });
+
+    });
+
+    describe('routines', () => {
+      let upgrader;
+
+      beforeEach(() => {
+        upgrader = migrate.upgrader(ref, 'some-token');
+      });
+
+      it('should have version attribute', () => {
+        upgrader.routines.forEach(r => expect(r.version).to.be.ok());
+      });
+
+      it('should have a upgrade attribute (func)', () => {
+        upgrader.routines.forEach(r => expect(r.upgrade).to.be.an('function'));
       });
 
     });
