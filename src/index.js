@@ -4,7 +4,7 @@ const rest = require('./rest');
 const tokens = require('./tokens');
 const migrate = require('./migrate');
 
-exports.migrate = migrate;
 exports.restClient = rest.client;
-exports.getToken = tokens.get;
+exports.auth = tokens.auth;
+exports.migrate = (ref, token) => migrate.factory(ref, token);
 

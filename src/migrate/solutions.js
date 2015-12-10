@@ -195,5 +195,13 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 };
 
+// New version after migration
 exports.version = version;
+exports.description = 'Convert solutions and resolutions to queuedSolutions';
+
+// Tranform the solutions and resolutions into queuedSolutions
+// (and optionally tasks).
 exports.upgrade = (src, token) => new Upgrader(src, token).start();
+
+// Nothing to do when reverting (maybe deleted queued solutions)
+exports.revert = () => Promise.resolve(version - 1);

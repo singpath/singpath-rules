@@ -3,12 +3,12 @@
 const migrateSolutions = require('./solutions');
 
 
-class Upgrader {
+class Migrater {
 
   constructor(ref, token) {
     this.ref = ref.root().child('meta/version');
     this.token = token;
-    this.routines = [
+    this._upgrades = [
       migrateSolutions
     ];
   }
@@ -35,21 +35,43 @@ class Upgrader {
     });
   }
 
+  upgrades(version) {
+    this._upgrades.sort((a, b) => a.version - b.version);
+    return this._upgrades.filter(u => u.version > version);
+  }
+
+  upgradeAt(version) {
+    this._upgrades.sort((a, b) => a.version - b.version);
+    return this._upgrades.filter(r => r.version <= version).pop();
+  }
+
   next() {
-    this.routines.sort(r => r.version);
-
     return this.version().then(version => {
-      const nextRoutine = this.routines.filter(r => r.version > version).slice(0, 1).pop();
+      const nextUpgrade = this.upgrades(version).slice(0, 1).pop();
 
-      if (nextRoutine == null) {
+      if (nextUpgrade == null) {
         return version;
       }
 
-      return nextRoutine.upgrade(this.ref, this.token).then(
+      return nextUpgrade.upgrade(this.ref, this.token).then(
+        newVersion => this.bump(newVersion)
+      );
+    });
+  }
+
+  revert() {
+    return this.version().then(version => {
+      const lastUpgrade = this.upgradeAt(version);
+
+      if (lastUpgrade == null) {
+        return version;
+      }
+
+      return lastUpgrade.revert(this.ref, this.token).then(
         newVersion => this.bump(newVersion)
       );
     });
   }
 }
 
-exports.upgrader = (ref, token) => new Upgrader(ref, token);
+exports.factory = (ref, token) => new Migrater(ref, token);

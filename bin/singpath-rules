@@ -7,8 +7,10 @@ const argparse = require('argparse');
 const fs = require('fs');
 const path = require('path');
 const bolt = require('firebase-bolt');
+const Firebase = require('firebase');
 
 const packageJson = require('../package.json');
+const singpathRules = require('../');
 
 const DEFAULTS = {};
 const cmds = [
@@ -45,11 +47,40 @@ const cmds = [
     description: 'Show current version and next upgrades',
 
     options(parser) {
-      parser.addArgument(['-f', '--firebase-id'], {});
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
     },
 
     cmd(opts) {
-      console.log(opts);
+      const id = opts['firebase_id'];
+
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token);
+
+        return migrater.version().then(version => {
+          console.log('%s current version: %s', id, version);
+          return migrater.upgrades(version);
+        }).then(upgrades => {
+          if (upgrades.length === 0) {
+            console.log('DB up-to-date.');
+            return;
+          }
+
+          console.log('\nDB %s upgrade behind:', upgrades.length);
+          upgrades.forEach(
+            u => console.log('- version %s: %s.', u.version, u.description)
+          );
+        });
+      }).then(
+        () => process.exit(0),
+        err => {
+          console.error(err);
+          process.exit(1);
+        }
+      );
     }
   }, {
     name: 'upgrade',

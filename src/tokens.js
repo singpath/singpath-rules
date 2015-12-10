@@ -48,7 +48,7 @@ function auth(ref, session) {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(token);
         }
       });
     });
