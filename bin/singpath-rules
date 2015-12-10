@@ -21,12 +21,12 @@ const cmds = [
     options(parser) {
       parser.addArgument(['-o', '--output'], {
         metavar: 'file',
-        help: 'output to file.json\n(default: %(defaultValue)s)',
+        help: 'File to output json rules to;\n(default: %(defaultValue)s)',
         defaultValue: './rules.json'
       });
       parser.addArgument(['base-rule'], {
         nargs: '*',
-        help: 'base rules to merge with the singpath rules'
+        help: 'Base rules to merge with the singpath rules'
       });
     },
 
@@ -34,13 +34,11 @@ const cmds = [
       const baseRules = opts['base-rule'].map(loadJsonRules);
       const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
 
-      Promise.all(baseRules.concat(boltRules)).then(
+      return Promise.all(baseRules.concat(boltRules)).then(
         rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
       ).then(
         rules => writeFile(opts.output, JSON.stringify({rules}, null, 2))
-      ).catch(err => {
-        console.error(err.toString());
-      });
+      );
     }
   }, {
     name: 'version',
@@ -54,10 +52,9 @@ const cmds = [
 
     cmd(opts) {
       const id = opts['firebase_id'];
-
       const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
-      singpathRules.auth(ref).then(token => {
+      return singpathRules.auth(ref).then(token => {
         const migrater = singpathRules.migrate(ref, token);
 
         return migrater.version().then(version => {
@@ -74,24 +71,27 @@ const cmds = [
             u => console.log('- version %s: %s.', u.version, u.description)
           );
         });
-      }).then(
-        () => process.exit(0),
-        err => {
-          console.error(err);
-          process.exit(1);
-        }
-      );
+      });
     }
   }, {
     name: 'upgrade',
     description: 'Migrate the firebase db to the next schema version',
 
     options(parser) {
-      parser.addArgument(['-f', '--firebase-id'], {});
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
     },
 
     cmd(opts) {
-      console.log(opts);
+      const id = opts['firebase_id'];
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      return singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token);
+
+        return migrater.next();
+      }).then(version => console.log('%s (new) version: %s', id, version));
     }
   }
 ];
@@ -103,7 +103,13 @@ if (require.main === module) {
 function main() {
   const args = parseArgs();
 
-  args.func(args);
+  args.func(args).then(
+    () => process.exit(0),
+    err => {
+      console.error(err.stack);
+      process.exit(1);
+    }
+  );
 }
 
 
