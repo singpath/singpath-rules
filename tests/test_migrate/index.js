@@ -196,7 +196,7 @@ describe('Migrator', () => {
 
         upgrader.next().then(() => {
           sinon.assert.calledOnce(expected.upgrade);
-          sinon.assert.calledWithExactly(expected.upgrade, upgrader.ref, upgrader.token);
+          sinon.assert.calledWithExactly(expected.upgrade, upgrader.ref, upgrader.token, {});
           done();
         }).catch(done);
       });
@@ -256,7 +256,7 @@ describe('Migrator', () => {
 
         upgrader.revert().then(() => {
           sinon.assert.calledOnce(expected.revert);
-          sinon.assert.calledWithExactly(expected.revert, upgrader.ref, upgrader.token);
+          sinon.assert.calledWithExactly(expected.revert, upgrader.ref, upgrader.token, {});
           done();
         }).catch(done);
       });

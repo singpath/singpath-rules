@@ -1,20 +1,31 @@
 'use strict';
 
 const migrateSolutions = require('./solutions');
-
+const noop = () => undefined;
 
 class Migrater {
 
-  constructor(ref, token) {
+  constructor(ref, token, opts) {
     this.ref = ref.root().child('meta/version');
     this.token = token;
     this._upgrades = [
       migrateSolutions
     ];
+
+    this.opts = opts = opts || {};
+    this.queryLog = opts.queryLog || noop;
+    this.logger = opts.logger || {
+      debug: noop,
+      info: noop,
+      error: noop
+    };
+
+    this.logger.debug('Handling migration of %s...', ref);
   }
 
   version() {
     return new Promise((resolve, reject) => {
+      this.logger.debug('Getting version at %s...', this.ref);
       this.ref.once(
         'value',
         snapshot => resolve(snapshot.val() || 0),
@@ -25,6 +36,7 @@ class Migrater {
 
   bump(version) {
     return new Promise((resolve, reject) => {
+      this.logger.debug('Updating version at %s to %s...', this.ref, version);
       this.ref.set(version, err => {
         if (err) {
           reject(err);
@@ -50,10 +62,17 @@ class Migrater {
       const nextUpgrade = this.upgrades(version).slice(0, 1).pop();
 
       if (nextUpgrade == null) {
+        this.logger.debug('No upgrade to apply...');
+
         return version;
       }
 
-      return nextUpgrade.upgrade(this.ref, this.token).then(
+      this.logger.debug(
+        'Upgrading to version %s: %s...',
+        nextUpgrade.version, nextUpgrade.description
+      );
+
+      return nextUpgrade.upgrade(this.ref, this.token, this.opts).then(
         newVersion => this.bump(newVersion)
       );
     });
@@ -64,14 +83,17 @@ class Migrater {
       const lastUpgrade = this.upgradeAt(version);
 
       if (lastUpgrade == null) {
+        this.logger.debug('No version to revert to...');
         return version;
       }
 
-      return lastUpgrade.revert(this.ref, this.token).then(
+      this.logger.debug('Reverting to version %s...', lastUpgrade.version - 1);
+
+      return lastUpgrade.revert(this.ref, this.token, this.opts).then(
         newVersion => this.bump(newVersion)
       );
     });
   }
 }
 
-exports.factory = (ref, token) => new Migrater(ref, token);
+exports.factory = (ref, token, opts) => new Migrater(ref, token, opts);

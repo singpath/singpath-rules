@@ -50,12 +50,12 @@ const cmds = [
       });
     },
 
-    cmd(opts) {
+    cmd(opts, logger) {
       const id = opts['firebase_id'];
       const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
       return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token);
+        const migrater = singpathRules.migrate(ref, token, {logger});
 
         return migrater.version().then(version => {
           console.log('%s current version: %s', id, version);
@@ -83,15 +83,35 @@ const cmds = [
       });
     },
 
-    cmd(opts) {
+    cmd(opts, logger) {
       const id = opts['firebase_id'];
       const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
       return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token);
+        const migrater = singpathRules.migrate(ref, token, {logger});
 
         return migrater.next();
-      }).then(version => console.log('%s (new) version: %s', id, version));
+      }).then(version => logger.info('%s (new) version: %s', id, version));
+    }
+  }, {
+    name: 'downgrade',
+    description: 'Migrate the firebase db back to the previous schema version',
+
+    options(parser) {
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
+    },
+
+    cmd(opts, logger) {
+      const id = opts['firebase_id'];
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      return singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token, {logger});
+
+        return migrater.revert();
+      }).then(version => console.info('%s (new) version: %s', id, version));
     }
   }
 ];
@@ -102,11 +122,20 @@ if (require.main === module) {
 
 function main() {
   const args = parseArgs();
+  let level;
 
-  args.func(args).then(
+  if (args.debug) {
+    level = singpathRules.logger.levels.DEBUG;
+  } else if (args.silent) {
+    level = singpathRules.logger.levels.ERROR;
+  }
+
+  const logger = singpathRules.logger(process.stderr, level);
+
+  args.func(args, logger).then(
     () => process.exit(0),
     err => {
-      console.error(err.stack);
+      logger.error(err.stack);
       process.exit(1);
     }
   );
