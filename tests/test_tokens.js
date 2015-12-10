@@ -62,6 +62,20 @@ describe('tokens', () => {
       ).then(() => done(), done);
     });
 
+    it('should returns a rejected promise if the token request returns an error', done => {
+      const error = {
+        code: 'INVALID_FIREBASE',
+        message: 'Invalid Firebase specified.'
+      };
+
+      request.get.yields(null, null, {error});
+
+      tokens.get('some-id', session).then(
+        () => done(new Error('unexpected')),
+        () => done()
+      );
+    });
+
     it('should query the admin firebase handler', done => {
       tokens.get('some-id', session).then(() => {
         sinon.assert.calledWithExactly(
