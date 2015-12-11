@@ -13,6 +13,7 @@ const packageJson = require('../package.json');
 const singpathRules = require('../');
 
 const DEFAULTS = {};
+const queryLog = data => console.log(JSON.stringify(data));
 const cmds = [
   {
     name: 'compile',
@@ -55,7 +56,7 @@ const cmds = [
       const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
       return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token, {logger});
+        const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
 
         return migrater.version().then(version => {
           console.log('%s current version: %s', id, version);
@@ -88,7 +89,7 @@ const cmds = [
       const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
       return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token, {logger});
+        const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
 
         return migrater.next();
       }).then(version => logger.info('%s (new) version: %s', id, version));

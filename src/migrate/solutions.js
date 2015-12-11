@@ -108,13 +108,18 @@ const Upgrader = exports.Upgrader = class Upgrader {
         [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
       };
 
-      this.queryLog({baseUri: this.baseUri, path: '/singpath', data: data});
       this.dest.update(data, err => {
+        let success;
+
         if (err) {
+          success = false;
           reject(err);
         } else {
+          success = true;
           resolve();
         }
+
+        this.queryLog({data, success, baseUri: this.baseUri, path: '/singpath'});
       });
     });
   }
@@ -129,13 +134,16 @@ const Upgrader = exports.Upgrader = class Upgrader {
           [`queues/default/tasks/${taskId}`]: task
         };
 
-        this.queryLog({baseUri: this.baseUri, path: '/singpath', data: data});
         this.dest.update(data, err => {
+          let success;
+
           if (err) {
             reject(err);
           } else {
             resolve();
           }
+
+          this.queryLog({data, success, baseUri: this.baseUri, path: '/singpath'});
         });
       });
     });
