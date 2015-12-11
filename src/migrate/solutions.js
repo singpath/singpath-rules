@@ -4,17 +4,29 @@ const Firebase = require('firebase');
 const rest = require('../rest');
 
 const version = 1;
+const noop = () => undefined;
 
 
 const Upgrader = exports.Upgrader = class Upgrader {
 
-  constructor(ref, token) {
+  constructor(ref, token, opts) {
     const root = ref.root();
-    const baseUri = root.toString();
+
+    this.baseUri = root.toString();
 
     this.dest = root.child('singpath');
     this.taskDest = root.child('singpath/queues/default/tasks');
-    this.client = rest.client(baseUri, token);
+    this.client = rest.client(this.baseUri, token);
+
+    opts = opts || {};
+    this.queryLog = opts.queryLog || noop;
+    this.logger = opts.logger || {
+      debug: noop,
+      info: noop,
+      error: noop
+    };
+
+    this.logger.debug('Upgrader targeting "%s"', this.baseUri);
   }
 
   start() {
@@ -77,6 +89,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   saveSolution(pathId, levelId, problemId, publicId, solution) {
+    this.logger.debug(
+      'Saving queued solution at /singpath/queuedSolutions/%s/%s/%s/%s/default',
+      pathId, levelId, problemId, publicId
+    );
+
     if (solution.meta.verified) {
       return this.saveVerifiedSolution(pathId, levelId, problemId, publicId, solution);
     } else {
@@ -86,10 +103,13 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
   saveVerifiedSolution(pathId, levelId, problemId, publicId, solution) {
     return new Promise((resolve, reject) => {
-      this.dest.update({
+      const data = {
         [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
         [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
-      }, err => {
+      };
+
+      this.queryLog({baseUri: this.baseUri, path: '/singpath', data: data});
+      this.dest.update(data, err => {
         if (err) {
           reject(err);
         } else {
@@ -102,13 +122,15 @@ const Upgrader = exports.Upgrader = class Upgrader {
   saveSolutionAndTask(pathId, levelId, problemId, publicId, solution) {
     return this.task(pathId, levelId, problemId, publicId, solution).then(task => {
       const taskId = solution.meta.taskId = this.taskDest.push();
-
       return new Promise((resolve, reject) => {
-        this.dest.update({
+        const data = {
           [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
           [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution),
           [`queues/default/tasks/${taskId}`]: task
-        }, err => {
+        };
+
+        this.queryLog({baseUri: this.baseUri, path: '/singpath', data: data});
+        this.dest.update(data, err => {
           if (err) {
             reject(err);
           } else {
@@ -120,7 +142,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   migratePaths() {
+    this.logger.info('migrating solutions...');
+
     return this.pathIds().then(ids => {
+      this.logger.debug('Paths to handle: %j', ids);
+
       return ids.reduce((chain, pathId) => {
         return chain.then(() => this.migrateLevels(pathId));
       }, Promise.resolve());
@@ -128,7 +154,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   migrateLevels(pathId) {
+    this.logger.info('migrating solutions at /singpath/solutions/%s ...', pathId);
+
     return this.levelIds(pathId).then(ids => {
+      this.logger.debug('Levels to handle (path id: %s): %j', pathId, ids);
+
       return ids.reduce((chain, levelId) => {
         return chain.then(() => this.migrateProblems(pathId, levelId));
       }, Promise.resolve());
@@ -136,7 +166,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   migrateProblems(pathId, levelId) {
+    this.logger.info('migrating solutions at /singpath/solutions/%s/%s ...', pathId, levelId);
+
     return this.problemIds(pathId, levelId).then(ids => {
+      this.logger.debug('Problems to handle (path id: %s, level id: %s): %j', pathId, levelId, ids);
+
       return ids.reduce((chain, problemId) => {
         return chain.then(() => this.migrateSolutions(pathId, levelId, problemId));
       }, Promise.resolve());
@@ -144,14 +178,21 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   migrateSolutions(pathId, levelId, problemId) {
+    this.logger.info('migrating solutions at /singpath/solutions/%s/%s/%s ...', pathId, levelId, problemId);
     return Promise.all([
       this.solutions(pathId, levelId, problemId),
       this.resolutions(pathId, levelId, problemId)
     ]).then(data => {
       const solutions = data[0] || {};
       const resolutions = data[1] || {};
+      const publicIds = Object.keys(solutions);
 
-      return Object.keys(solutions).reduce((chain, publicId) => {
+      this.logger.debug(
+        'Solutions to handle (path id: %s, level id: %s, problem id: %s): %j',
+        pathId, levelId, problemId, publicIds
+      );
+
+      return publicIds.reduce((chain, publicId) => {
         const payload = solutions[publicId];
         const resolution = resolutions[publicId];
 
@@ -195,5 +236,13 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 };
 
+// New version after migration
 exports.version = version;
-exports.upgrade = (src, token) => new Upgrader(src, token).start();
+exports.description = 'Convert solutions and resolutions to queuedSolutions';
+
+// Transform the solutions and resolutions into queuedSolutions
+// (and optionally tasks).
+exports.upgrade = (src, token, opts) => new Upgrader(src, token, opts).start();
+
+// Nothing to do when reverting (maybe deleted queued solutions)
+exports.revert = () => Promise.resolve(version - 1);

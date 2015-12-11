@@ -1,20 +1,31 @@
 'use strict';
 
 const migrateSolutions = require('./solutions');
+const noop = () => undefined;
 
+class Migrater {
 
-class Upgrader {
-
-  constructor(ref, token) {
+  constructor(ref, token, opts) {
     this.ref = ref.root().child('meta/version');
     this.token = token;
-    this.routines = [
+    this._upgrades = [
       migrateSolutions
     ];
+
+    this.opts = opts = opts || {};
+    this.queryLog = opts.queryLog || noop;
+    this.logger = opts.logger || {
+      debug: noop,
+      info: noop,
+      error: noop
+    };
+
+    this.logger.debug('Handling migration of %s...', ref);
   }
 
   version() {
     return new Promise((resolve, reject) => {
+      this.logger.debug('Getting version at %s...', this.ref);
       this.ref.once(
         'value',
         snapshot => resolve(snapshot.val() || 0),
@@ -25,6 +36,7 @@ class Upgrader {
 
   bump(version) {
     return new Promise((resolve, reject) => {
+      this.logger.debug('Updating version at %s to %s...', this.ref, version);
       this.ref.set(version, err => {
         if (err) {
           reject(err);
@@ -35,21 +47,53 @@ class Upgrader {
     });
   }
 
+  upgrades(version) {
+    this._upgrades.sort((a, b) => a.version - b.version);
+    return this._upgrades.filter(u => u.version > version);
+  }
+
+  upgradeAt(version) {
+    this._upgrades.sort((a, b) => a.version - b.version);
+    return this._upgrades.filter(r => r.version <= version).pop();
+  }
+
   next() {
-    this.routines.sort(r => r.version);
-
     return this.version().then(version => {
-      const nextRoutine = this.routines.filter(r => r.version > version).slice(0, 1).pop();
+      const nextUpgrade = this.upgrades(version).slice(0, 1).pop();
 
-      if (nextRoutine == null) {
+      if (nextUpgrade == null) {
+        this.logger.debug('No upgrade to apply...');
+
         return version;
       }
 
-      return nextRoutine.upgrade(this.ref, this.token).then(
+      this.logger.debug(
+        'Upgrading to version %s: %s...',
+        nextUpgrade.version, nextUpgrade.description
+      );
+
+      return nextUpgrade.upgrade(this.ref, this.token, this.opts).then(
+        newVersion => this.bump(newVersion)
+      );
+    });
+  }
+
+  revert() {
+    return this.version().then(version => {
+      const lastUpgrade = this.upgradeAt(version);
+
+      if (lastUpgrade == null) {
+        this.logger.debug('No version to revert to...');
+        return version;
+      }
+
+      this.logger.debug('Reverting to version %s...', lastUpgrade.version - 1);
+
+      return lastUpgrade.revert(this.ref, this.token, this.opts).then(
         newVersion => this.bump(newVersion)
       );
     });
   }
 }
 
-exports.upgrader = (ref, token) => new Upgrader(ref, token);
+exports.factory = (ref, token, opts) => new Migrater(ref, token, opts);

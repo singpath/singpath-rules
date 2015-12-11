@@ -1,0 +1,249 @@
+#!/usr/bin/env node
+/*eslint no-console: 0*/
+'use strict';
+
+
+const argparse = require('argparse');
+const fs = require('fs');
+const path = require('path');
+const bolt = require('firebase-bolt');
+const Firebase = require('firebase');
+
+const packageJson = require('../package.json');
+const singpathRules = require('../');
+
+const DEFAULTS = {};
+const cmds = [
+  {
+    name: 'compile',
+    description: 'Compile bolt rules',
+
+    options(parser) {
+      parser.addArgument(['-o', '--output'], {
+        metavar: 'file',
+        help: 'File to output json rules to;\n(default: %(defaultValue)s)',
+        defaultValue: './rules.json'
+      });
+      parser.addArgument(['base-rule'], {
+        nargs: '*',
+        help: 'Base rules to merge with the singpath rules'
+      });
+    },
+
+    cmd(opts) {
+      const baseRules = opts['base-rule'].map(loadJsonRules);
+      const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
+
+      return Promise.all(baseRules.concat(boltRules)).then(
+        rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
+      ).then(
+        rules => writeFile(opts.output, JSON.stringify({rules}, null, 2))
+      );
+    }
+  }, {
+    name: 'version',
+    description: 'Show current version and next upgrades',
+
+    options(parser) {
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
+    },
+
+    cmd(opts, logger) {
+      const id = opts['firebase_id'];
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      return singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token, {logger});
+
+        return migrater.version().then(version => {
+          console.log('%s current version: %s', id, version);
+          return migrater.upgrades(version);
+        }).then(upgrades => {
+          if (upgrades.length === 0) {
+            console.log('DB up-to-date.');
+            return;
+          }
+
+          console.log('\nDB %s upgrade behind:', upgrades.length);
+          upgrades.forEach(
+            u => console.log('- version %s: %s.', u.version, u.description)
+          );
+        });
+      });
+    }
+  }, {
+    name: 'upgrade',
+    description: 'Migrate the firebase db to the next schema version',
+
+    options(parser) {
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
+    },
+
+    cmd(opts, logger) {
+      const id = opts['firebase_id'];
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      return singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token, {logger});
+
+        return migrater.next();
+      }).then(version => logger.info('%s (new) version: %s', id, version));
+    }
+  }, {
+    name: 'downgrade',
+    description: 'Migrate the firebase db back to the previous schema version',
+
+    options(parser) {
+      parser.addArgument(['-f', '--firebase-id'], {
+        defaultValue: 'singpath-dev'
+      });
+    },
+
+    cmd(opts, logger) {
+      const id = opts['firebase_id'];
+      const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+      return singpathRules.auth(ref).then(token => {
+        const migrater = singpathRules.migrate(ref, token, {logger});
+
+        return migrater.revert();
+      }).then(version => console.info('%s (new) version: %s', id, version));
+    }
+  }
+];
+
+if (require.main === module) {
+  main();
+}
+
+function main() {
+  const args = parseArgs();
+  let level;
+
+  if (args.debug) {
+    level = singpathRules.logger.levels.DEBUG;
+  } else if (args.silent) {
+    level = singpathRules.logger.levels.ERROR;
+  }
+
+  const logger = singpathRules.logger(process.stderr, level);
+
+  args.func(args, logger).then(
+    () => process.exit(0),
+    err => {
+      logger.error(err.stack);
+      process.exit(1);
+    }
+  );
+}
+
+
+function parseArgs(args) {
+  const parser = new argparse.ArgumentParser({
+    version: packageJson.version,
+    addHelp: true,
+    description: 'Manage SingPath firebase db rules',
+    formatterClass: argparse.RawTextHelpFormatter
+  });
+
+  parser.setDefaults(DEFAULTS);
+
+  parser.addArgument(['-d', '--debug' ], {
+    action: 'storeTrue',
+    help: 'print debug messages'
+  });
+
+  parser.addArgument(['-s', '--silent' ], {
+    action: 'storeTrue',
+    help: 'print only error messages'
+  });
+
+  const subparsers = parser.addSubparsers();
+
+  cmds.forEach(sub => {
+    const parser =  subparsers.addParser(sub.name, {
+      addHelp: true,
+      description: sub.description,
+      formatterClass: argparse.RawTextHelpFormatter
+    });
+
+    sub.options(parser);
+    parser.setDefaults({func: sub.cmd});
+  });
+
+  return parser.parseArgs(args);
+}
+
+function loadJsonRules(path) {
+  return readFile(path).then(
+    data => JSON.parse(data)
+  ).then(
+    doc => doc.rules || {}
+  );
+}
+
+function loadBoldRules(dir) {
+  return readBoltFiles(dir).then(
+    rules => translateRules(rules)
+  ).then(
+    doc => doc.rules || {}
+  );
+}
+
+function readBoltFiles(dir) {
+  return scanBoltFiles(dir).then(
+    files => files.map(f => path.join(dir, f))
+  ).then(
+    files => Promise.all(files.map(readFile))
+  ).then(
+    rules => rules.join('\n')
+  );
+}
+
+function scanBoltFiles(dir) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(dir, (err, files) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(files.filter(
+          file => file.endsWith('.bolt')
+        ));
+      }
+    });
+  });
+}
+
+function translateRules(input) {
+  const symbols = bolt.parse(input);
+  const gen = new bolt.Generator(symbols);
+  return gen.generateRules();
+}
+
+function readFile(path) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  });
+}
+
+function writeFile(path, data) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(path, data, err => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  });
+}

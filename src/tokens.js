@@ -34,6 +34,10 @@ function getToken(firebaseId, session) {
       }
     });
   }).then(data => {
+    if (data.error) {
+      return Promise.reject(new Error(data.message));
+    }
+
     return data.personalToken;
   });
 }
@@ -48,7 +52,7 @@ function auth(ref, session) {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(token);
         }
       });
     });

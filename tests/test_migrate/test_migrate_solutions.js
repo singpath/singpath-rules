@@ -787,4 +787,15 @@ describe('migrate/solutions', () => {
 
   });
 
+  describe('revert', () => {
+
+    it('should resolve to 0', done => {
+      migrateSolutions.revert().then(version => {
+        expect(version).to.be(0);
+        done();
+      }).catch(done);
+    });
+
+  });
+
 });
