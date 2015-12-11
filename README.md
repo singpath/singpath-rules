@@ -5,20 +5,38 @@
 
 Rules and migration scripts for Singpath Firbase db.
 
+## Requirements
+
+- node 4+; you can use something like [nvm](https://github.com/creationix/nvm)
+  to install multiple node version.
+- one or more [Firebase](https://firebase.com) project. If it will be used
+  in production, you should have at production and a staging db
+
+
 ## Setup
 
-Clone this repository and install dependencies:
-```shell
-git clone https://github.com/singpath/singpath-rules.git
-cd firebase-rules
-npm install
-```
+We will rely [firebase-tools](https://github.com/firebase/firebase-tools) to
+upload rules and data.
 
-The rules are defined in `./rules/*.bolt` files using
-[firebase-bolt](https://github.com/firebase/bolt/blob/v0.5.0/docs/language.md).
+1. setup a new npm project and install dependencies:
+        ```shell
+        npm init
+        npm install --save firebase-tools
+        npm install --save singpath/singpath-rules
+        ```
 
-The tests are defined in `./e2e/*.js` files using
-[firebase-test](https://github.com/singpath/firebase-test)
+2. setup a Firebase project in the current directory (it should like
+   to your staging DB):
+
+        ```shell
+        ./node_modules/.bin/firebase init
+        ./node_modules/.bin/firebase login
+        ```
+
+Because `firebase-tools` and `singpath-rules` are installed locally you need to
+use `./node_modules/.bin/[script-name]`. For recurrent task using it,
+you should add a "scripts" entry in `package.json` which will have
+`./node_modules/.bin` in its path when executed with `npm run`.
 
 
 ## Building json rules
@@ -26,8 +44,9 @@ The tests are defined in `./e2e/*.js` files using
 `firebase-tools` (see below) will support bolt rules directly sometime in the
 future, but for now we need them in the current json encoded form.
 
+To compile the rules (from `node_modules/singpath-rules/rules`):
 ```shell
-npm run rules
+./node_modules/.bin/singpath-rules compile
 ```
 
 You will find the rules in `rules.json`.
@@ -35,27 +54,23 @@ You will find the rules in `rules.json`.
 
 ## Uploading rules
 
-You should use [firebase-tools](https://github.com/firebase/firebase-tools) to
-upload rules and data.
-
-To upload the rules:
 ```json
-./node_modules/.bin/firebase deploy:rules -f singpath-db-id
+./node_modules/.bin/firebase deploy:rules
 ```
-(Replace `singpath-db-id` with your staging or production DB id)
 
+Use the `-f` to switch the Firebase DB to upload to.
 
 ## Uploading data
 
-You should use [firebase-tools](https://github.com/firebase/firebase-tools) to
-upload rules and data.
-
 To upload the school and badge data:
 ```json
-./node_modules/.bin/firebase data:set -f singpath-db-id /classMentors/badges data/classMentors/badges.json
-./node_modules/.bin/firebase data:set -f singpath-db-id /classMentors/schools data/classMentors/schools.json
+./node_modules/.bin/firebase data:set \
+    /classMentors/badges \
+    node_modules/singpath-rules/data/classMentors/badges.json
+./node_modules/.bin/firebase data:set \
+    /classMentors/schools \
+    node_modules/singpath-rules/data/classMentors/schools.json
 ```
-(Replace `singpath-db-id` with your staging or production DB id)
 
 
 ## Development
