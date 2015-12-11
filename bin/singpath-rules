@@ -12,7 +12,9 @@ const Firebase = require('firebase');
 const packageJson = require('../package.json');
 const singpathRules = require('../');
 
-const DEFAULTS = {};
+const DEFAULTS = {
+  'firebase_id': 'singpath-play'
+};
 const queryLog = data => console.log(JSON.stringify(data));
 const cmds = [
   {
@@ -46,9 +48,7 @@ const cmds = [
     description: 'Show current version and next upgrades',
 
     options(parser) {
-      parser.addArgument(['-f', '--firebase-id'], {
-        defaultValue: 'singpath-dev'
-      });
+      parser.addArgument(['-f', '--firebase-id']);
     },
 
     cmd(opts, logger) {
@@ -79,9 +79,7 @@ const cmds = [
     description: 'Migrate the firebase db to the next schema version',
 
     options(parser) {
-      parser.addArgument(['-f', '--firebase-id'], {
-        defaultValue: 'singpath-dev'
-      });
+      parser.addArgument(['-f', '--firebase-id']);
     },
 
     cmd(opts, logger) {
@@ -122,24 +120,25 @@ if (require.main === module) {
 }
 
 function main() {
-  const args = parseArgs();
-  let level;
+  parseArgs().then(args => {
+    let level;
 
-  if (args.debug) {
-    level = singpathRules.logger.levels.DEBUG;
-  } else if (args.silent) {
-    level = singpathRules.logger.levels.ERROR;
-  }
-
-  const logger = singpathRules.logger(process.stderr, level);
-
-  args.func(args, logger).then(
-    () => process.exit(0),
-    err => {
-      logger.error(err.stack);
-      process.exit(1);
+    if (args.debug) {
+      level = singpathRules.logger.levels.DEBUG;
+    } else if (args.silent) {
+      level = singpathRules.logger.levels.ERROR;
     }
-  );
+
+    const logger = singpathRules.logger(process.stderr, level);
+
+    args.func(args, logger).then(
+      () => process.exit(0),
+      err => {
+        logger.error(err.stack);
+        process.exit(1);
+      }
+    );
+  });
 }
 
 
@@ -176,7 +175,10 @@ function parseArgs(args) {
     parser.setDefaults({func: sub.cmd});
   });
 
-  return parser.parseArgs(args);
+  return readFirebaseIni().then(id => {
+    parser.setDefaults({'firebase_id': id || DEFAULTS['firebase_id']});
+    return parser.parseArgs(args);
+  });
 }
 
 function loadJsonRules(path) {
@@ -223,6 +225,14 @@ function translateRules(input) {
   const symbols = bolt.parse(input);
   const gen = new bolt.Generator(symbols);
   return gen.generateRules();
+}
+
+function readFirebaseIni() {
+  return readFile('./firebase.json').then(
+    content => JSON.parse(content)
+  ).then(
+    init => init && init.firebase
+  );
 }
 
 function readFile(path) {
