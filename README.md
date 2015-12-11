@@ -19,6 +19,7 @@ We will rely [firebase-tools](https://github.com/firebase/firebase-tools) to
 upload rules and data.
 
 1. setup a new npm project and install dependencies:
+
         ```shell
         npm init
         npm install --save firebase-tools
@@ -33,10 +34,47 @@ upload rules and data.
         ./node_modules/.bin/firebase login
         ```
 
+3. edit firebase.json to add the "rules" entry:
+
+        ```json
+        {
+          "firebase": "singpath-dev",
+          "rules": "rules.json",
+          "public": "public",
+          "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+          ]
+        }
+        ```
+
 Because `firebase-tools` and `singpath-rules` are installed locally you need to
-use `./node_modules/.bin/[script-name]`. For recurrent task using it,
+use `./node_modules/.bin/[script-name]`. For recurrent tasks using it,
 you should add a "scripts" entry in `package.json` which will have
 `./node_modules/.bin` in its path when executed with `npm run`.
+
+E.g, `package.json`:
+```json
+{
+  "name": "rules",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "rules": "singpath-rules compile",
+    "deploy-rules": "firebase deploy:rules",
+    "deploy-rules-production": "firebase deploy:rules -f my-firebase-production-id"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase-tools": "^2.1.1",
+    "singpath-rules": "github:singpath/singpath-rules"
+  }
+}
+```
 
 
 ## Building json rules
