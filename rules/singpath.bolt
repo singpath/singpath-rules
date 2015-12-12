@@ -117,6 +117,7 @@ type Worker {
 
 path /singpath/paths {
   read() = true;
+  index() = ['title'];
 }
 
 path /singpath/paths/$pathId is Path {
@@ -128,6 +129,7 @@ path /singpath/paths/$pathId is Path {
 
 path /singpath/levels {
   read() = true;
+  index() = ['title'];
 }
 
 path /singpath/levels/$pathId {
@@ -164,6 +166,7 @@ path /singpath/problems/$pathId/$levelId {
     && (isAppAdmin('singpath') || isOwner(root.singpath.levels[$pathId][$levelId]))
     && levelHasNoProblem($pathId, $levelId)
   );
+  index() = ['title'];
 }
 
 path /singpath/problems/$pathId/$levelId/$problemId is Problem {
@@ -271,6 +274,7 @@ path /singpath/queuedSolutions/$pathId/$levelId/$problemId/$publicId/$queueId/re
 
 path /singpath/queues/$queueId/workers {
   read() = true;
+  index() = ['presence', 'completed'];
 }
 
 path /singpath/queues/$queueId/workers/$workerId is Worker {
@@ -284,6 +288,7 @@ path /singpath/queues/$queueId/workers/$workerId is Worker {
 
 path /singpath/queues/$queueId/tasks {
   read() = isQueueWorker($queueId);
+  index() = ['started'];
 }
 
 path /singpath/queues/$queueId/tasks/$taskId is Task {
