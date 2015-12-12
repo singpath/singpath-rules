@@ -175,7 +175,7 @@ function parseArgs(args) {
     parser.setDefaults({func: sub.cmd});
   });
 
-  return readFirebaseIni().then(id => {
+  return readFirebaseInit().then(id => {
     parser.setDefaults({'firebase_id': id || DEFAULTS['firebase_id']});
     return parser.parseArgs(args);
   });
@@ -227,11 +227,13 @@ function translateRules(input) {
   return gen.generateRules();
 }
 
-function readFirebaseIni() {
+function readFirebaseInit() {
   return readFile('./firebase.json').then(
     content => JSON.parse(content)
   ).then(
     init => init && init.firebase
+  ).catch(
+    () => console.warn('failed to read/parse ./firebase.json')
   );
 }
 
