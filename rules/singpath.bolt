@@ -288,7 +288,7 @@ path /singpath/queues/$queueId/workers/$workerId is Worker {
 
 path /singpath/queues/$queueId/tasks {
   read() = isQueueWorker($queueId);
-  index() = ['started'];
+  index() = ['started', 'completed'];
 }
 
 path /singpath/queues/$queueId/tasks/$taskId is Task {
