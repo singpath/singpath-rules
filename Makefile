@@ -22,7 +22,7 @@ default: rules.json
 	npm run upload-rules
 
 rules.json: rules/*.bolt extra-rules.json
-	npm run all-rules
+	npm run rules
 
 e2e: .upload-rules.${SINGPATH_RULES_FB_ID}.stamp
 	# SINGPATH_RULES_FB_SECRET and SINGPATH_RULES_FB_ID should be set.
