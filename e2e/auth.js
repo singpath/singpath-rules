@@ -57,7 +57,7 @@ describe('auth', function() {
               bob: true
             },
             users: {
-              bobId: {
+              'custome:bob': {
                 publicId: 'bob'
               }
             }
@@ -70,32 +70,32 @@ describe('auth', function() {
       });
 
       it('should be writable', done => {
-        suite.with(seed).as('bobId').set(bobClaim, 'bobId').ok(done);
+        suite.with(seed).as('custome:bob', null, true).set(bobClaim, 'custome:bob').ok(done);
       });
 
       it('should only be writable by the user claiming it', done => {
-        suite.with(seed).as('aliceId').set(bobClaim, 'bobId').shouldFail(done);
+        suite.with(seed).as('aliceId').set(bobClaim, 'custome:bob').shouldFail(done);
       });
 
       it('should not be deleteable', done => {
-        suite.with(seed).as('bobId').remove(bobClaim).shouldFail(done);
+        suite.with(seed).as('custome:bob').remove(bobClaim).shouldFail(done);
       });
 
       it('should not be editable', done => {
-        seed.auth.publicIds = {bob: 'bobId'};
-        seed.auth.users.bobId.publicId = null;
+        seed.auth.publicIds = {bob: 'custome:bob'};
+        seed.auth.users['custome:bob'].publicId = null;
         seed.auth.users.aliceId = {publicId: 'bob'};
         suite.with(seed).as('aliceId').set(bobClaim, 'aliceId').shouldFail(done);
       });
 
       it('should only be writable if the public id is registered as used', done => {
         seed.auth.usedPublicIds.bob = false;
-        suite.with(seed).as('bobId').set(bobClaim, 'bobId').shouldFail(done);
+        suite.with(seed).as('custome:bob').set(bobClaim, 'custome:bob').shouldFail(done);
       });
 
       it('should only be writable if the user is using the publicId', done => {
-        seed.auth.users.bobId.publicId = 'some-other-id';
-        suite.with(seed).as('bobId').set(bobClaim, 'bobId').shouldFail(done);
+        seed.auth.users['custome:bob'].publicId = 'some-other-id';
+        suite.with(seed).as('custome:bob').set(bobClaim, 'custome:bob').shouldFail(done);
       });
 
     });

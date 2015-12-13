@@ -4,7 +4,7 @@
  */
 
 type AuthId extends String {
-  validate() = this.matches(/^[-a-zA-Z0-9]+$/);
+  validate() = this.matches(/^[-:a-zA-Z0-9]+$/);
 }
 
 type BirthYear extends Number {
