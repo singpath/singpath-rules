@@ -10,7 +10,7 @@ const rest = require('../../src/rest');
 describe('migrate/solutions', () => {
 
   describe('Upgrader', () => {
-    let upgrader, singpathRef, tasksRef, client;
+    let upgrader, singpathRef, tasksRef, someTaskRef, client;
 
     beforeEach(() => {
       client = {};
@@ -20,8 +20,11 @@ describe('migrate/solutions', () => {
         update: sinon.stub().yields(null)
       };
 
+      someTaskRef = {
+        key: sinon.stub().returns('someNewTaskId')
+      };
       tasksRef = {
-        push: sinon.stub().returns('someNewTaskId')
+        push: sinon.stub().returns(someTaskRef)
       };
 
       const ref = {
@@ -691,10 +694,13 @@ describe('migrate/solutions', () => {
         const solution = {solution: 'data', meta: {}};
         const solutionRef = {solution: 'ref'};
         const task = {task: 'data'};
+        const someNewTask = {
+          key: sinon.stub().returns('someNewTaskId')
+        };
 
         sinon.stub(upgrader, 'task').returns(Promise.resolve(task));
         sinon.stub(upgrader, 'solutionRef').returns(solutionRef);
-        upgrader.taskDest.push.returns('someNewTaskId');
+        upgrader.taskDest.push.returns(someNewTask);
 
         upgrader.saveSolutionAndTask(
           'somePathId', 'someLevelId', 'someProblemId', 'alice', solution
@@ -733,8 +739,12 @@ describe('migrate/solutions', () => {
       it('should save verifier solution without a new task', done => {
         const solution = {
           meta: {
-            verified: true
-          }
+            verified: true,
+            solved: true,
+            startedAt: 1234,
+            endedAt: 1235
+          },
+          payload: {}
         };
 
         upgrader.saveSolution('somePathId', 'someLevelId', 'someProblemId', 'alice', solution).then(() => {
@@ -749,8 +759,12 @@ describe('migrate/solutions', () => {
       it('should save unverifier solution with a new task', done => {
         const solution = {
           meta: {
-            verified: false
-          }
+            verified: false,
+            solved: false,
+            startedAt: 1234,
+            endedAt: 1235
+          },
+          payload: {}
         };
 
         upgrader.saveSolution('somePathId', 'someLevelId', 'someProblemId', 'alice', solution).then(() => {
