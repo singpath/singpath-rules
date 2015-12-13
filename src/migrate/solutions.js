@@ -94,6 +94,19 @@ const Upgrader = exports.Upgrader = class Upgrader {
       pathId, levelId, problemId, publicId
     );
 
+    if (
+      !solution ||
+      !solution.meta ||
+      !solution.payload ||
+      !solution.meta.endedAt ||
+      !solution.meta.startedAt ||
+      solution.meta.verified == null ||
+      solution.meta.solved == null
+    ) {
+      this.logger.debug('Dropping solution; it is missing some attribute');
+      return Promise.resolve();
+    }
+
     if (solution.meta.verified) {
       return this.saveVerifiedSolution(pathId, levelId, problemId, publicId, solution);
     } else {
@@ -126,7 +139,8 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
   saveSolutionAndTask(pathId, levelId, problemId, publicId, solution) {
     return this.task(pathId, levelId, problemId, publicId, solution).then(task => {
-      const taskId = solution.meta.taskId = this.taskDest.push();
+      const taskId = solution.meta.taskId = this.taskDest.push().key();
+
       return new Promise((resolve, reject) => {
         const data = {
           [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
