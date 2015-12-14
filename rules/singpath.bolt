@@ -428,8 +428,7 @@ taskIsCompleted(task) = (
   task.started == true
   && task.completed == true
   && task.worker != null
-  && task.results == null
-  && task.consumed == (task.solutionRef != null)
+  && task.consumed == (task.results == null)
   && (
     (task.solutionRef != null && root[task.solutionRef].results[key()] != null)
     || (task.results != null)
