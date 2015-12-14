@@ -70,7 +70,7 @@ describe('auth', function() {
       });
 
       it('should be writable', done => {
-        suite.with(seed).as('custome:bob', null, true).set(bobClaim, 'custome:bob').ok(done);
+        suite.with(seed).as('custome:bob').set(bobClaim, 'custome:bob').ok(done);
       });
 
       it('should only be writable by the user claiming it', done => {

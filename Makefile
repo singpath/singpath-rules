@@ -12,7 +12,7 @@
 default: rules.json
 .PHONY: default
 
-.upload-rules.${SINGPATH_RULES_FB_ID}.stamp: rules
+.upload-rules.${SINGPATH_RULES_FB_ID}.stamp: rules.json
 	# SINGPATH_RULES_FB_ID should be set.
 	# 
 	# example:
@@ -20,8 +20,9 @@ default: rules.json
 	#   export SINGPATH_RULES_FB_ID=singpath-dev"
 	#   
 	npm run upload-rules
+	touch $@
 
-rules.json: rules/*.bolt extra-rules.json
+rules.json: rules/*.bolt
 	npm run rules
 
 e2e: .upload-rules.${SINGPATH_RULES_FB_ID}.stamp

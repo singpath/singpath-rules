@@ -1259,6 +1259,34 @@ describe('singpath', function() {
             }).shouldFail(done);
           });
 
+          it('should allow worker to save results with task', done => {
+            const pullTaskPath = 'singpath/queues/default/tasks/somePullingTaskId';
+            const results = singpath.queues.default.tasks.somePullingTaskId.results;
+
+            singpath.queues.default.tasks.somePullingTaskId.completed = false;
+            singpath.queues.default.tasks.somePullingTaskId.completedAt = null;
+            singpath.queues.default.tasks.somePullingTaskId.results = null;
+
+            suite.with(seed).as(someWorker.uid, someWorker.data).update(pullTaskPath, {
+              completed: true,
+              completedAt: Firebase.ServerValue.TIMESTAMP,
+              results: results
+            }).ok(done);
+          });
+
+          it('should allow worker to save results with task if the ref\'ed solution is taskid has changed', done => {
+            const pushTaskPath = 'singpath/queues/default/tasks/someTaskId';
+
+            solvingSolution();
+            singpath.queuedSolutions.somePathId.someLevelId.someProblemId.alice.default.meta.taskId = 'someOtherTaskId';
+
+            suite.with(seed).as(someWorker.uid, someWorker.data).update(pushTaskPath, {
+              completed: true,
+              completedAt: Firebase.ServerValue.TIMESTAMP,
+              results: solvedSolution.results.someTaskId
+            }).ok(done);
+          });
+
           describe('consumed', () => {
             const pullTaskPath = 'singpath/queues/default/tasks/somePullingTaskId/consumed';
 
