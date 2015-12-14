@@ -1267,7 +1267,7 @@ describe('singpath', function() {
             singpath.queues.default.tasks.somePullingTaskId.completedAt = null;
             singpath.queues.default.tasks.somePullingTaskId.results = null;
 
-            suite.with(seed).as(someWorker.uid, someWorker.data, true).update(pullTaskPath, {
+            suite.with(seed).as(someWorker.uid, someWorker.data).update(pullTaskPath, {
               completed: true,
               completedAt: Firebase.ServerValue.TIMESTAMP,
               results: results
@@ -1280,7 +1280,7 @@ describe('singpath', function() {
             solvingSolution();
             singpath.queuedSolutions.somePathId.someLevelId.someProblemId.alice.default.meta.taskId = 'someOtherTaskId';
 
-            suite.with(seed).as(someWorker.uid, someWorker.data, true).update(pushTaskPath, {
+            suite.with(seed).as(someWorker.uid, someWorker.data).update(pushTaskPath, {
               completed: true,
               completedAt: Firebase.ServerValue.TIMESTAMP,
               results: solvedSolution.results.someTaskId
