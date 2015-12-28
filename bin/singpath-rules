@@ -134,7 +134,7 @@ function main() {
     args.func(args, logger).then(
       () => process.exit(0),
       err => {
-        logger.error(err.stack);
+        console.error(err.stack || err);
         process.exit(1);
       }
     );
@@ -190,10 +190,15 @@ function loadJsonRules(path) {
 }
 
 function loadBoldRules(dir) {
-  return readBoltFiles(dir).then(
-    rules => translateRules(rules)
-  ).then(
+  let concatBolt;
+
+  return readBoltFiles(dir).then(rules => {
+    concatBolt = rules;
+    return translateRules(rules);
+  }).then(
     doc => doc.rules || {}
+  ).catch(
+    err => writeFile('./rules.debug.bolt', concatBolt).then(() => Promise.reject(err))
   );
 }
 
