@@ -28,16 +28,19 @@ type Profile {
 }
 
 type User {
-  validate() = key() == this.id && hasRegisteredPublicId(this.id, this.publicId);
+  validate() = (
+    key() == this.id
+    && hasRegisteredPublicId(this.id, this.publicId)
+  );
 
   id: String,
-  publicId: PublicId,
   fullName: FullName,
   displayName: Name,
   email: Email,
   gravatar: URL,
   createdAt: InitialTimeStamp,
 
+  publicId: PublicId | Null,
   country: Country | Null,
   yearOfBirth: BirthYear | Null,  
   school: School | Null,
@@ -83,18 +86,23 @@ isAppAdmin(app) = isLoggedIn() && root[app].admins[auth.uid] == true;
 
 hasClaimedPublicId(uid, id) = root.auth.publicIds[id] == uid;
 hasRegisteredPublicId(uid, id) = (
-  hasClaimedPublicId(uid, id) 
-  && isPublicIdUsed(id)
-  && root.auth.users[uid].publicId == id
+  id == null
+  || (
+    hasClaimedPublicId(uid, id) 
+    && isPublicIdUsed(id)
+    && root.auth.users[uid].publicId == id
+  )
 );
 
 isUserRefInSync(publicId, userRef)  = (
-  userRef.displayName === root.auth.users[root.auth.publicIds[publicId]].displayName &&
-  userRef.gravatar === root.auth.users[root.auth.publicIds[publicId]].gravatar
+  publicId != null
+  && userRef.displayName === root.auth.users[root.auth.publicIds[publicId]].displayName
+  && userRef.gravatar === root.auth.users[root.auth.publicIds[publicId]].gravatar
 );
 
 isProfileInSync(publicId, profile) = (
-  isUserRefInSync(publicId, profile)
+  publicId != null
+  && isUserRefInSync(publicId, profile)
   && profile.yearOfBirth === root.auth.users[root.auth.publicIds[publicId]].yearOfBirth
   && (
     (
