@@ -142,7 +142,7 @@ describe('auth', function() {
       suite.with({}).as('bob').get(users).shouldFail(done);
     });
 
-    describe('children', () => {
+    describe('$userId', () => {
       const bob = users + '/bob';
       let seed;
 
@@ -168,6 +168,11 @@ describe('auth', function() {
       });
 
       it('should be writable by user', done => {
+        suite.with(seed).as('bob').set(bob, userData).ok(done);
+      });
+
+      it('should be writable by user without publicId', done => {
+        userData.publicId = null;
         suite.with(seed).as('bob').set(bob, userData).ok(done);
       });
 

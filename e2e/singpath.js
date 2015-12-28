@@ -1236,6 +1236,16 @@ describe('singpath', function() {
             }).ok(done);
           });
 
+          it('should allow workers to un-claim its own task and record its attempt', done => {
+            unclaimingTask();
+            suite.with(seed).as(someWorker.uid, someWorker.data).update(someTaskPath, {
+              'started': false,
+              'startedAt': null,
+              'worker': null,
+              [`tries/${someWorker.uid}`]: Firebase.ServerValue.TIMESTAMP
+            }).ok(done);
+          });
+
           it('should allow any worker to un-claim some other worker task', done => {
             unclaimingTask();
             suite.with(seed).as('someOtherWorker', someWorker.data).update(someTaskPath, {

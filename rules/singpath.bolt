@@ -107,6 +107,7 @@ type Task {
   completedAt: InitialTimeStamp | Null,
   worker: AuthId | Null,
   results: SolutionResults | Null,
+  tries: Object | Null,
 }
 
 type Worker {
