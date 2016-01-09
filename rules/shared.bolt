@@ -39,6 +39,12 @@ type PublicId extends String {
   validate() = isPublicId(this);
 }
 
+type SecretKey extends String {
+  validate() = this.length >= 16;
+}
+
+type Time extends Number;
+
 type TimeStamp extends Number {
   validate() = this == now;
 }
