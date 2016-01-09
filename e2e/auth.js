@@ -236,6 +236,14 @@ describe('auth', function() {
         suite.with(seed).as('bob').set(bob, userData).ok(done);
       });
 
+      it('should allow secret key to be added', (done) => {
+        seed.auth.users = {bob: userData};
+        suite.with(seed).as('bob', null, true).update(bob, {
+          secretKey: 's'.repeat(16),
+          secretKeyValidUntil: Date.now() + 3600
+        }).ok(done);
+      });
+
     });
 
   });

@@ -44,6 +44,8 @@ type User {
   country: Country | Null,
   yearOfBirth: BirthYear | Null,  
   school: School | Null,
+  secretKey: SecretKey | Null,
+  secretKeyValidUntil: Time | Null,
 }
 
 type UserRef {
