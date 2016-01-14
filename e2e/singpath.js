@@ -832,6 +832,7 @@ describe('singpath', function() {
 
           it('should be writable by owner', done => {
             writing();
+            someProblemData.seed = 'hello = ""';
             suite.with(seed).as('aliceUid').set(someProblemPath, someProblemData).ok(done);
           });
 
