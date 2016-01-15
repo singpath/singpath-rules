@@ -7,6 +7,7 @@
     "singpath-rules": "./bin/singpath-rules"
   },
   "scripts": {
+    "cover": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcov -- -R spec",
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "data-badges": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/badges -o data/classMentors/badges.json",
     "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
