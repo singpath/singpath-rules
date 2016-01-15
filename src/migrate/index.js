@@ -1,6 +1,9 @@
 'use strict';
 
 const migrateSolutions = require('./solutions');
+const migrateJavaProblems = require('./java-problems');
+
+
 const noop = () => undefined;
 
 class Migrater {
@@ -9,7 +12,8 @@ class Migrater {
     this.ref = ref.root().child('meta/version');
     this.token = token;
     this._upgrades = [
-      migrateSolutions
+      migrateSolutions,
+      migrateJavaProblems
     ];
 
     this.opts = opts = opts || {};
