@@ -13,10 +13,10 @@ import com.singpath.SolutionRunner;
 
 public class SingPathTest extends SolutionRunner {
 
-    @Test
-    public void testCapitalize() throws Exception {
+  @Test
+  public void testCapitalize() throws Exception {
 %s
-    }
+  }
 }`;
 
 
@@ -121,8 +121,8 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   convertTests(test) {
-    const padding = '      ';
-    const paddedTests = test.split('\n').map( l => padding + l).join('\n');
+    const padding = '    ';
+    const paddedTests = test.split('\n').map(l => padding + l).join('\n');
 
     return util.format(warpper, paddedTests);
   }
