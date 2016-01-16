@@ -1,6 +1,7 @@
 'use strict';
 
 require('./test_migrate_solutions');
+require('./test_migrate_java_problems');
 
 
 const expect = require('expect.js');

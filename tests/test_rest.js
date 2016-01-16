@@ -76,6 +76,86 @@ describe('rest', () => {
         }).catch(done);
       });
 
+      it('can send filter query', done => {
+        const opts = {
+          orderBy: '"baz"',
+          equalTo: 1
+        };
+
+        client.get('/foo/bar', opts).then(() => {
+          sinon.assert.calledWithExactly(
+            request.get,
+            sinon.match.has('qs', sinon.match(opts)),
+            sinon.match.func
+          );
+          done();
+        }).catch(done);
+      });
+
+    });
+
+    describe('set', () => {
+      let token, client;
+
+      beforeEach(() => {
+        sinon.stub(request, 'put').yields(null, null, null);
+
+        token = 'some-token';
+        client = rest.client('some-id', token);
+      });
+
+      afterEach(() => {
+        request.put.restore();
+      });
+
+      it('should return a fulfilled promise', done => {
+        const data = {};
+
+        client.set('/foo/bar', data).then(() => {
+          done();
+        }).catch(done);
+      });
+
+      it('should return a promise rejected with the request error', done => {
+        const data = {};
+        const err = new Error();
+
+        request.put.yields(err, null, null);
+
+        client.set('/foo/bar', data).then(
+          () => Promise.reject(new Error('Unexpected return')),
+          e => expect(e).to.be(err)
+        ).then(() => done()).catch(done);
+      });
+
+      it('should send a json request', done => {
+        const data = {};
+
+        client.set('/foo/bar', data).then(() => {
+          sinon.assert.calledWithExactly(
+            request.put,
+            sinon.match.has('json', data),
+            sinon.match.func
+          );
+          done();
+        }).catch(done);
+      });
+
+      it('should log the query', done => {
+        const data = {};
+        const path = '/foo/bar';
+        const log = sinon.stub();
+
+        client.set(path, data, log).then(() => {
+          sinon.assert.calledWithExactly(log, sinon.match({
+            success: true,
+            path: path + '.json',
+            data
+          }));
+          done();
+        }).catch(done);
+      });
+
     });
 
   });

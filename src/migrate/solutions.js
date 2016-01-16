@@ -122,13 +122,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
       };
 
       this.dest.update(data, err => {
-        let success;
+        const success = err == null;
 
         if (err) {
-          success = false;
           reject(err);
         } else {
-          success = true;
           resolve();
         }
 
@@ -149,7 +147,7 @@ const Upgrader = exports.Upgrader = class Upgrader {
         };
 
         this.dest.update(data, err => {
-          let success;
+          const success = err == null;
 
           if (err) {
             reject(err);
