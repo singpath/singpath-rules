@@ -178,7 +178,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
       this.logger.debug('Tasks to handle: %j', ids);
 
       return ids.filter(id => {
-        return tasks[id].payload.language === 'java';
+        return (
+          tasks[id] &&
+          tasks[id].payload &&
+          tasks[id].payload.language === 'java'
+        );
       }).reduce((chain, taskId) => {
         const oldTests = tasks[taskId].payload.tests;
         const newTests = this.convertTests(oldTests);
