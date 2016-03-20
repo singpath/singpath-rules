@@ -934,7 +934,7 @@ describe('singpath', function() {
               const someSolutionPath = 'singpath/queuedSolutions/somePathId/someLevelId/someProblemId/alice/default';
 
               it('should not be deletable', done => {
-                // make sure singpath.queuedSolutions.somePathId.someLevelId.someProblemId it's empty
+                // make sure singpath.queuedSolutions.somePathId.someLevelId.someProblemId is not empty
                 // (so that it tests the correct rules).
                 singpath.queuedSolutions.somePathId.someLevelId.someProblemId.bob = true;
                 suite.with(seed).as(userUid).remove(someSolutionPath).shouldFail(done);
@@ -1114,6 +1114,12 @@ describe('singpath', function() {
 
             });
 
+          });
+
+          it('should be deletable by owner', function(done) {
+            const path = 'singpath/queuedSolutions/somePathId/someLevelId/someProblemId';
+
+            suite.with(seed).as('aliceUid').remove(path).ok(done);
           });
 
         });
