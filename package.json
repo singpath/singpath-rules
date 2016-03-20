@@ -1,6 +1,6 @@
 {
-  "name": "singpath-rules",
-  "version": "1.0.0-alpha1",
+  "name": "@singpath/rules",
+  "version": "0.0.0",
   "description": "Firebase Rules for Singpath.com DB",
   "main": "src/index.js",
   "bin": {
