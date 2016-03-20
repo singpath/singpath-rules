@@ -11,3 +11,7 @@ rules.json
 *.stamp
 
 *.log
+
+*.sublime-project
+*.sublime-workspace
+singpath.env
