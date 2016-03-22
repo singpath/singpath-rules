@@ -16,104 +16,102 @@ const DEFAULTS = {
   'firebase_id': 'singpath-play'
 };
 const queryLog = data => console.log(JSON.stringify(data));
-const cmds = [
-  {
-    name: 'compile',
-    description: 'Compile bolt rules',
+const cmds = [{
+  name: 'compile',
+  description: 'Compile bolt rules',
 
-    options(parser) {
-      parser.addArgument(['-o', '--output'], {
-        metavar: 'file',
-        help: 'File to output json rules to;\n(default: %(defaultValue)s)',
-        defaultValue: './rules.json'
-      });
-      parser.addArgument(['base-rule'], {
-        nargs: '*',
-        help: 'Base rules to merge with the singpath rules'
-      });
-    },
+  options(parser) {
+    parser.addArgument(['-o', '--output'], {
+      metavar: 'file',
+      help: 'File to output json rules to;\n(default: %(defaultValue)s)',
+      defaultValue: './rules.json'
+    });
+    parser.addArgument(['base-rule'], {
+      nargs: '*',
+      help: 'Base rules to merge with the singpath rules'
+    });
+  },
 
-    cmd(opts) {
-      const baseRules = opts['base-rule'].map(loadJsonRules);
-      const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
+  cmd(opts) {
+    const baseRules = opts['base-rule'].map(loadJsonRules);
+    const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
 
-      return Promise.all(baseRules.concat(boltRules)).then(
-        rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
-      ).then(
-        rules => writeFile(opts.output, JSON.stringify({rules}, null, 2))
-      );
-    }
-  }, {
-    name: 'version',
-    description: 'Show current version and next upgrades',
-
-    options(parser) {
-      parser.addArgument(['-f', '--firebase-id']);
-    },
-
-    cmd(opts, logger) {
-      const id = opts['firebase_id'];
-      const ref = new Firebase(`https://${id}.firebaseio.com/`);
-
-      return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
-
-        return migrater.version().then(version => {
-          console.log('%s current version: %s', id, version);
-          return migrater.upgrades(version);
-        }).then(upgrades => {
-          if (upgrades.length === 0) {
-            console.log('DB up-to-date.');
-            return;
-          }
-
-          console.log('\nDB %s upgrade behind:', upgrades.length);
-          upgrades.forEach(
-            u => console.log('- version %s: %s.', u.version, u.description)
-          );
-        });
-      });
-    }
-  }, {
-    name: 'upgrade',
-    description: 'Migrate the firebase db to the next schema version',
-
-    options(parser) {
-      parser.addArgument(['-f', '--firebase-id']);
-    },
-
-    cmd(opts, logger) {
-      const id = opts['firebase_id'];
-      const ref = new Firebase(`https://${id}.firebaseio.com/`);
-
-      return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
-
-        return migrater.next();
-      }).then(version => logger.info('%s (new) version: %s', id, version));
-    }
-  }, {
-    name: 'downgrade',
-    description: 'Migrate the firebase db back to the previous schema version',
-
-    options(parser) {
-      parser.addArgument(['-f', '--firebase-id'], {
-        defaultValue: 'singpath-dev'
-      });
-    },
-
-    cmd(opts, logger) {
-      const id = opts['firebase_id'];
-      const ref = new Firebase(`https://${id}.firebaseio.com/`);
-
-      return singpathRules.auth(ref).then(token => {
-        const migrater = singpathRules.migrate(ref, token, {logger});
-
-        return migrater.revert();
-      }).then(version => console.info('%s (new) version: %s', id, version));
-    }
+    return Promise.all(baseRules.concat(boltRules)).then(
+      rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
+    ).then(
+      rules => writeFile(opts.output, JSON.stringify({rules}, null, 2))
+    );
   }
-];
+}, {
+  name: 'version',
+  description: 'Show current version and next upgrades',
+
+  options(parser) {
+    parser.addArgument(['-f', '--firebase-id']);
+  },
+
+  cmd(opts, logger) {
+    const id = opts['firebase_id'];
+    const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+    return singpathRules.auth(ref).then(token => {
+      const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
+
+      return migrater.version().then(version => {
+        console.log('%s current version: %s', id, version);
+        return migrater.upgrades(version);
+      }).then(upgrades => {
+        if (upgrades.length === 0) {
+          console.log('DB up-to-date.');
+          return;
+        }
+
+        console.log('\nDB %s upgrade behind:', upgrades.length);
+        upgrades.forEach(
+          u => console.log('- version %s: %s.', u.version, u.description)
+        );
+      });
+    });
+  }
+}, {
+  name: 'upgrade',
+  description: 'Migrate the firebase db to the next schema version',
+
+  options(parser) {
+    parser.addArgument(['-f', '--firebase-id']);
+  },
+
+  cmd(opts, logger) {
+    const id = opts['firebase_id'];
+    const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+    return singpathRules.auth(ref).then(token => {
+      const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
+
+      return migrater.next();
+    }).then(version => logger.info('%s (new) version: %s', id, version));
+  }
+}, {
+  name: 'downgrade',
+  description: 'Migrate the firebase db back to the previous schema version',
+
+  options(parser) {
+    parser.addArgument(['-f', '--firebase-id'], {
+      defaultValue: 'singpath-dev'
+    });
+  },
+
+  cmd(opts, logger) {
+    const id = opts['firebase_id'];
+    const ref = new Firebase(`https://${id}.firebaseio.com/`);
+
+    return singpathRules.auth(ref).then(token => {
+      const migrater = singpathRules.migrate(ref, token, {logger});
+
+      return migrater.revert();
+    }).then(version => console.info('%s (new) version: %s', id, version));
+  }
+}];
 
 if (require.main === module) {
   main();
