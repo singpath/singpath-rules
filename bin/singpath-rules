@@ -231,13 +231,19 @@ function translateRules(input) {
 }
 
 function readFirebaseInit() {
-  return readFile('./firebase.json').then(
+  const path = './firebase.json';
+
+  return readFile(path).catch(
+    () => 'null'
+  ).then(
     content => JSON.parse(content)
   ).then(
     init => init && init.firebase
-  ).catch(
-    () => console.warn('failed to read/parse ./firebase.json')
-  );
+  ).catch(err => {
+    console.error('failed to read/parse ./firebase.json');
+
+    return Promise.reject(err);
+  });
 }
 
 function readFile(path) {
