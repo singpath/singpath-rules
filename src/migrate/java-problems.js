@@ -1,6 +1,6 @@
 'use strict';
 
-const rest = require('../rest');
+const restFirebase = require('rest-firebase');
 const util = require('util');
 
 const version = 2;
@@ -24,9 +24,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token, opts) {
     const root = ref.root();
+    const baseUri = root.toString();
+    const rest = restFirebase.factory(baseUri);
 
-    this.baseUri = root.toString();
-    this.client = rest.client(this.baseUri, token);
+    this.baseUri = baseUri;
+    this.client = paths => rest({paths, token});
 
     opts = opts || {};
     this.queryLog = opts.queryLog || noop;
@@ -60,7 +62,10 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   pathIds() {
-    return this.client.get('singpath/paths').then(paths => {
+    const paths = 'singpath/paths';
+    const ref = this.client(paths);
+
+    return ref.get().then(paths => {
       if (paths == null) {
         return [];
       }
@@ -82,7 +87,10 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   levelIds(pathId) {
-    return this.client.get(`singpath/levels/${pathId}`, true).then(ids => {
+    const paths = `singpath/levels/${pathId}`;
+    const ref = this.client(paths);
+
+    return ref.get({shallow: true}).then(ids => {
       return ids !== null ? Object.keys(ids) : [];
     });
   }
@@ -109,15 +117,17 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   problems(pathId, levelId) {
-    const path = `singpath/problems/${pathId}/${levelId}`;
+    const paths = `singpath/problems/${pathId}/${levelId}`;
+    const ref = this.client(paths);
 
-    return this.client.get(path).then(problems => problems || {});
+    return ref.get().then(problems => problems || {});
   }
 
   saveProblemTests(pathId, levelId, problemId, tests) {
-    const path = `singpath/problems/${pathId}/${levelId}/${problemId}/tests`;
+    const paths = `singpath/problems/${pathId}/${levelId}/${problemId}/tests`;
+    const ref = this.client(paths);
 
-    return this.client.set(path, tests, this.queryLog);
+    return ref.set(tests);
   }
 
   convertTests(test) {
@@ -158,15 +168,18 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   solutions(pathId, levelId, problemId) {
-    const path = `singpath/queuedSolutions/${pathId}/${levelId}/${problemId}`;
+    const paths = `singpath/queuedSolutions/${pathId}/${levelId}/${problemId}`;
+    const ref = this.client(paths);
 
-    return this.client.get(path).then(solutions => solutions || {});
+    return ref.get().then(solutions => solutions || {});
   }
 
   saveSolutionTests(pathId, levelId, problemId, publicId, tests) {
-    const path = `singpath/queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default/payload/tests`;
+    const paths = `singpath/queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default/payload/tests`;
+    const ref = this.client(paths);
 
-    return this.client.set(path, tests, this.queryLog);
+
+    return ref.set(tests);
   }
 
   migrateTaskTests() {
@@ -193,19 +206,21 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   tasks() {
-    const path = 'singpath/queues/default/tasks';
+    const paths = 'singpath/queues/default/tasks';
+    const ref = this.client(paths);
     const opts = {
       orderBy: '"completed"',
       equalTo: false
     };
 
-    return this.client.get(path, opts).then(tasks => tasks || {});
+    return ref.get(opts).then(tasks => tasks || {});
   }
 
   saveTaskTests(taskId, tests) {
-    const path = `singpath/queues/default/tasks/${taskId}/payload/tests`;
+    const paths = `singpath/queues/default/tasks/${taskId}/payload/tests`;
+    const ref = this.client(paths);
 
-    return this.client.set(path, tests, this.queryLog);
+    return ref.set(tests);
   }
 };
 

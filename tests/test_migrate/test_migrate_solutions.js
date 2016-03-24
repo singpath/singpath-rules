@@ -4,18 +4,13 @@ const expect = require('expect.js');
 const sinon = require('sinon');
 const Firebase = require('firebase');
 const migrateSolutions = require('../../src/migrate/solutions');
-const rest = require('../../src/rest');
-
 
 describe('migrate/solutions', () => {
 
   describe('Upgrader', () => {
-    let upgrader, singpathRef, tasksRef, someTaskRef, client;
+    let upgrader, singpathRef, tasksRef, someTaskRef;
 
     beforeEach(() => {
-      client = {};
-      sinon.stub(rest, 'client').returns(client);
-
       singpathRef = {
         update: sinon.stub().yields(null)
       };
@@ -39,14 +34,8 @@ describe('migrate/solutions', () => {
       upgrader = new migrateSolutions.Upgrader(ref, 'some-token');
     });
 
-    afterEach(() => {
-      rest.client.restore();
-    });
-
     it('should create a rest client', () => {
-      expect(upgrader.client).to.be.ok();
-      sinon.assert.calledOnce(rest.client);
-      sinon.assert.calledWithExactly(rest.client, 'http://some-id.firebaseio.com/', 'some-token');
+      expect(upgrader.client().toString()).to.be('http://some-id.firebaseio.com/.json');
     });
 
     it('should set reference for /singpath and /singpath/queues/default/tasks', () => {
@@ -55,6 +44,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('solution', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should return a promise resolving to a solved queued solution object', done => {
         const payload = {
@@ -206,6 +199,10 @@ describe('migrate/solutions', () => {
 
     describe('solutionRef', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should return a solved solution ref', function() {
         const newSolution = {
           meta: {
@@ -288,6 +285,10 @@ describe('migrate/solutions', () => {
 
     describe('task', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should return a promise resoltion to task object', done => {
         const newSolution = {
           meta: {
@@ -303,10 +304,12 @@ describe('migrate/solutions', () => {
           }
         };
 
-        client.get = sinon.stub().returns(Promise.resolve('aliceUid'));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve('aliceUid'))
+        });
 
         upgrader.task('somePathId', 'someLevelId', 'someProblemId', 'alice', newSolution).then(task => {
-          sinon.assert.calledOnce(client.get);
+          // sinon.assert.calledOnce(upgrader.client.get);
           expect(task).to.eql({
             owner: 'aliceUid',
             payload: {
@@ -327,22 +330,29 @@ describe('migrate/solutions', () => {
     });
 
     describe('pathIds', () => {
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should query the list of path', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.pathIds().then(() => {
-          sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/paths', true);
+          sinon.assert.calledOnce(upgrader.client);
+          sinon.assert.calledWithExactly(upgrader.client, 'singpath/paths');
           done();
         }).catch(done);
       });
 
       it('should return a promise resolving to an array of path id', done => {
-        client.get = sinon.stub().returns(Promise.resolve({
-          somePathId: true,
-          someOtherPathId: true
-        }));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve({
+            somePathId: true,
+            someOtherPathId: true
+          }))
+        });
 
         upgrader.pathIds().then(ids => {
           expect(ids).to.have.length(2);
@@ -353,7 +363,9 @@ describe('migrate/solutions', () => {
       });
 
       it('should resolve to an empty array if there are no path', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.pathIds().then(ids => {
           expect(ids).to.eql([]);
@@ -365,21 +377,29 @@ describe('migrate/solutions', () => {
 
     describe('levelIds', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query the list of level', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.levelIds('somePathId').then(() => {
-          sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/levels/somePathId', true);
+          sinon.assert.calledOnce(upgrader.client);
+          sinon.assert.calledWithExactly(upgrader.client, 'singpath/levels/somePathId');
           done();
         }).catch(done);
       });
 
       it('should return a promise resolving to an array of level id', done => {
-        client.get = sinon.stub().returns(Promise.resolve({
-          someLevelId: true,
-          someOtherLevelId: true
-        }));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve({
+            someLevelId: true,
+            someOtherLevelId: true
+          }))
+        });
 
         upgrader.levelIds('somePathId').then(ids => {
           expect(ids).to.have.length(2);
@@ -390,7 +410,9 @@ describe('migrate/solutions', () => {
       });
 
       it('should resolve to an empty array if there are no level', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.levelIds('somePathId').then(ids => {
           expect(ids).to.eql([]);
@@ -402,21 +424,29 @@ describe('migrate/solutions', () => {
 
     describe('problemIds', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query the list of problem', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.problemIds('somePathId', 'someLevelId').then(() => {
-          sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/problems/somePathId/someLevelId', true);
+          sinon.assert.calledOnce(upgrader.client);
+          sinon.assert.calledWithExactly(upgrader.client, 'singpath/problems/somePathId/someLevelId');
           done();
         }).catch(done);
       });
 
       it('should return a promise resolving to an array of problem id', done => {
-        client.get = sinon.stub().returns(Promise.resolve({
-          someProblemId: true,
-          someOtherProblemId: true
-        }));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve({
+            someProblemId: true,
+            someOtherProblemId: true
+          }))
+        });
 
         upgrader.problemIds('somePathId', 'someLevelId').then(ids => {
           expect(ids).to.have.length(2);
@@ -427,7 +457,9 @@ describe('migrate/solutions', () => {
       });
 
       it('should resolve to an empty array if there are no problem', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.problemIds('somePathId', 'someLevelId').then(ids => {
           expect(ids).to.eql([]);
@@ -439,12 +471,18 @@ describe('migrate/solutions', () => {
 
     describe('solutions', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query the list of solution', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.solutions('somePathId', 'someLevelId', 'someProblemId').then(() => {
-          sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/solutions/somePathId/someLevelId/someProblemId');
+          sinon.assert.calledOnce(upgrader.client);
+          sinon.assert.calledWithExactly(upgrader.client, 'singpath/solutions/somePathId/someLevelId/someProblemId');
           done();
         }).catch(done);
       });
@@ -455,7 +493,9 @@ describe('migrate/solutions', () => {
           someOtherId: {}
         };
 
-        client.get = sinon.stub().returns(Promise.resolve(solutions));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(solutions))
+        });
 
         upgrader.solutions('somePathId', 'someLevelId', 'problemId').then(actual => {
           expect(actual).to.be(solutions);
@@ -464,7 +504,9 @@ describe('migrate/solutions', () => {
       });
 
       it('should resolve to an empty object if there are no solutions', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.solutions('somePathId', 'someLevelId', 'problemId').then(actual => {
           expect(actual).to.eql({});
@@ -476,12 +518,18 @@ describe('migrate/solutions', () => {
 
     describe('resolutions', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query the list of resolution', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.resolutions('somePathId', 'someLevelId', 'someProblemId').then(() => {
-          sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/resolutions/somePathId/someLevelId/someProblemId');
+          sinon.assert.calledOnce(upgrader.client);
+          sinon.assert.calledWithExactly(upgrader.client, 'singpath/resolutions/somePathId/someLevelId/someProblemId');
           done();
         }).catch(done);
       });
@@ -492,7 +540,9 @@ describe('migrate/solutions', () => {
           someOtherId: {}
         };
 
-        client.get = sinon.stub().returns(Promise.resolve(resolutions));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(resolutions))
+        });
 
         upgrader.resolutions('somePathId', 'someLevelId', 'problemId').then(actual => {
           expect(actual).to.be(resolutions);
@@ -501,7 +551,9 @@ describe('migrate/solutions', () => {
       });
 
       it('should resolve to an empty object if there are no resolution', done => {
-        client.get = sinon.stub().returns(Promise.resolve(null));
+        upgrader.client.returns({
+          get: sinon.stub().returns(Promise.resolve(null))
+        });
 
         upgrader.resolutions('somePathId', 'someLevelId', 'problemId').then(actual => {
           expect(actual).to.eql({});
@@ -512,6 +564,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('migrateSolutions', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should query the problem solutions and resolution', done => {
         sinon.stub(upgrader, 'solutions').returns(Promise.resolve({}));
@@ -586,6 +642,10 @@ describe('migrate/solutions', () => {
 
     describe('migrateProblems', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query a level problems', done => {
         sinon.stub(upgrader, 'problemIds').returns(Promise.resolve([]));
 
@@ -611,6 +671,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('migrateLevels', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should query a path levels', done => {
         sinon.stub(upgrader, 'levelIds').returns(Promise.resolve([]));
@@ -638,6 +702,10 @@ describe('migrate/solutions', () => {
 
     describe('migratePaths', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
+
       it('should query paths', done => {
         sinon.stub(upgrader, 'pathIds').returns(Promise.resolve([]));
 
@@ -662,6 +730,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('saveVerifiedSolution', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should save a queued solution', done => {
         const solution = {solution: 'data'};
@@ -689,6 +761,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('saveSolutionAndTask', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should save a queued solution', done => {
         const solution = {solution: 'data', meta: {}};
@@ -734,6 +810,7 @@ describe('migrate/solutions', () => {
       beforeEach(() => {
         sinon.stub(upgrader, 'saveVerifiedSolution').returns(Promise.resolve());
         sinon.stub(upgrader, 'saveSolutionAndTask').returns(Promise.resolve());
+        sinon.stub(upgrader, 'client');
       });
 
       it('should save verifier solution without a new task', done => {
@@ -778,6 +855,10 @@ describe('migrate/solutions', () => {
     });
 
     describe('start', () => {
+
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+      });
 
       it('should miprate path problems', done => {
         sinon.stub(upgrader, 'migratePaths').returns(Promise.resolve());

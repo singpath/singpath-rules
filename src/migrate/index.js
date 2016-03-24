@@ -3,7 +3,6 @@
 const migrateSolutions = require('./solutions');
 const migrateJavaProblems = require('./java-problems');
 
-
 const noop = () => undefined;
 
 class Migrater {

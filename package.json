@@ -45,6 +45,6 @@
     "firebase-token-generator": "^2.0.0",
     "firebase-tools": "^2.1.0",
     "request": "^2.67.0",
-    "rest-firebase": "^0.3.0"
+    "rest-firebase": "^0.4.0"
   }
 }
