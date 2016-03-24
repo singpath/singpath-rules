@@ -2,29 +2,168 @@
 /*eslint no-console: 0*/
 'use strict';
 
-
-const argparse = require('argparse');
-const fs = require('fs');
-const path = require('path');
 const bolt = require('firebase-bolt');
 const Firebase = require('firebase');
+const path = require('path');
+const restFirebase = require('rest-firebase');
+const cli = require('@singpath/cli');
+const fs = require('fs');
 
 const packageJson = require('../package.json');
 const singpathRules = require('../');
 
 const DEFAULTS = {
-  'firebase_id': 'singpath-play'
+  firebaseId: 'singpath-play',
+  output: 'rules.json'
 };
-const queryLog = data => console.log(JSON.stringify(data));
-const cmds = [{
-  name: 'compile',
-  description: 'Compile bolt rules',
+const EPILOG = `Environment variables:
+  SINGPATH_RULES_FIREBASE_ID      Firebase ID.
+  SINGPATH_RULES_FIREBASE_SECRET  Firebase auth secret.
 
-  options(parser) {
+Config:
+  You can set some default values with a JSON file named 'firebase.json' in your
+  working directory.
+
+  Example:
+
+    {
+      "rules": "rules.json",
+      "firebase": "some-firebase-id"
+    }
+
+`;
+const uploadCmd = (opts, logger) => {
+  if (!opts.firebaseSecret) {
+    return Promise.reject(new Error('The firebase secret is required'));
+  }
+
+  if (opts.firebaseSecret.length !== 40) {
+    return Promise.reject(new Error('Invalid firebase secret'));
+  }
+
+  logger.info('Compiling rules...');
+
+  const baseRules = opts.baseRule.map(loadJsonRules);
+  const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
+
+
+  return Promise.all(baseRules.concat(boltRules)).then(
+    rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
+  ).then(rules => {
+    const jsonBody = JSON.stringify({rules}, null, 2);
+
+    if (!opts.output) {
+      logger.info('skipping saving rules copy');
+      return jsonBody;
+    }
+
+    logger.info('Saving rules into "%s"...', opts.output);
+
+    return cli.writeFile(opts.output, jsonBody);
+  }).then(jsonBody => {
+    logger.info(
+      'Uploading rules to "%s" using secret "%s%s"...',
+      opts.firebaseId,
+      opts.firebaseSecret.slice(0,5),
+      '*'.repeat(35)
+    );
+    logger.info('NOTE: does not currently includes Class Mentors rules.');
+
+    return opts.restFirebase({auth: opts.firebaseSecret}).rules(jsonBody);
+  });
+};
+const CMD = [{
+  name: 'init-db',
+  description: 'Setup security rules and seed the DB',
+
+  options(parser, defaults) {
+    parser.addArgument(['-f', '--firebase-id'], {
+      help: 'ID of Firebase DB to seed;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.firebaseId
+    });
+    parser.addArgument(['-a', '--firebase-secret'], {
+      help: 'Firebase secret of the Firebase DB to seed.',
+      defaultValue: defaults.firebaseSecret
+    });
     parser.addArgument(['-o', '--output'], {
       metavar: 'file',
       help: 'File to output json rules to;\n(default: %(defaultValue)s)',
-      defaultValue: './rules.json'
+      defaultValue: defaults.output
+    });
+    parser.addArgument(['base-rule'], {
+      nargs: '*',
+      help: 'Base rules to merge with the singpath rules'
+    });
+  },
+
+  cmd(opts, logger) {
+    const badges = require('../data/classMentors/badges.json');
+    const schools = require('../data/classMentors/schools.json');
+
+    return uploadCmd(opts, logger).then(() => {
+      const ref = opts.restFirebase({
+        paths: 'classMentors/badges',
+        auth: opts.firebaseSecret
+      });
+
+      logger.info('Uploading badges data...');
+
+      return ref.set(badges);
+    }).then(() => {
+      const ref = opts.restFirebase({
+        paths: 'classMentors/schools',
+        auth: opts.firebaseSecret
+      });
+
+      logger.info('Uploading schools data...');
+
+      return ref.set(schools);
+    }).then(() => {
+      const ref = opts.restFirebase({
+        paths: 'meta/version',
+        auth: opts.firebaseSecret
+      });
+
+      logger.info('Setting DB version to 1...');
+
+      return ref.set(1);
+    });
+  }
+
+}, {
+  name: 'upload-rules',
+  description: 'Compile bolt rules and upload them',
+
+  options(parser, defaults) {
+    parser.addArgument(['-f', '--firebase-id'], {
+      help: 'Firebase db to upload rules to;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.firebaseId
+    });
+    parser.addArgument(['-a', '--firebase-secret'], {
+      help: 'Firebase secret of the Firebase DB to upload rules to.',
+      defaultValue: defaults.firebaseSecret
+    });
+    parser.addArgument(['-o', '--output'], {
+      metavar: 'file',
+      help: 'File to output json rules to;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.output
+    });
+    parser.addArgument(['base-rule'], {
+      nargs: '*',
+      help: 'Base rules to merge with the singpath rules'
+    });
+  },
+
+  cmd: uploadCmd
+}, {
+  name: 'compile',
+  description: 'Compile bolt rules',
+
+  options(parser, defaults) {
+    parser.addArgument(['-o', '--output'], {
+      metavar: 'file',
+      help: 'File to output json rules to;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.output
     });
     parser.addArgument(['base-rule'], {
       nargs: '*',
@@ -33,26 +172,30 @@ const cmds = [{
   },
 
   cmd(opts) {
-    const baseRules = opts['base-rule'].map(loadJsonRules);
+    const baseRules = opts.baseRule.map(loadJsonRules);
     const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
 
     return Promise.all(baseRules.concat(boltRules)).then(
       rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
     ).then(
-      rules => writeFile(opts.output, JSON.stringify({rules}, null, 2))
+      rules => cli.writeFile(opts.output, JSON.stringify({rules}, null, 2))
     );
   }
 }, {
   name: 'version',
   description: 'Show current version and next upgrades',
 
-  options(parser) {
-    parser.addArgument(['-f', '--firebase-id']);
+  options(parser, defaults) {
+    parser.addArgument(['-f', '--firebase-id'], {
+      help: 'Firebase db to show version for;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.firebaseId
+    });
   },
 
   cmd(opts, logger) {
     const id = opts['firebase_id'];
     const ref = new Firebase(`https://${id}.firebaseio.com/`);
+    const queryLog = data => console.log(JSON.stringify(data));
 
     return singpathRules.auth(ref).then(token => {
       const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
@@ -77,8 +220,11 @@ const cmds = [{
   name: 'upgrade',
   description: 'Migrate the firebase db to the next schema version',
 
-  options(parser) {
-    parser.addArgument(['-f', '--firebase-id']);
+  options(parser, defaults) {
+    parser.addArgument(['-f', '--firebase-id'], {
+      help: 'Firebase db to upgrade;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.firebaseId
+    });
   },
 
   cmd(opts, logger) {
@@ -95,9 +241,10 @@ const cmds = [{
   name: 'downgrade',
   description: 'Migrate the firebase db back to the previous schema version',
 
-  options(parser) {
+  options(parser, defaults) {
     parser.addArgument(['-f', '--firebase-id'], {
-      defaultValue: 'singpath-dev'
+      help: 'Firebase db to downgrade;\n(default: %(defaultValue)s)',
+      defaultValue: defaults.firebaseId
     });
   },
 
@@ -118,69 +265,53 @@ if (require.main === module) {
 }
 
 function main() {
-  parseArgs().then(args => {
+  const firebaseOptions = {
+    rules: entry => (['output', entry[1]]),
+    firebase: entry => (['firebaseId', entry[1]])
+  };
+
+  cli.settings(DEFAULTS).json('./firebase.json', {
+    transform: entry => {
+      const key = entry[0];
+      const fn = firebaseOptions[key] || (e => e);
+
+      return fn(entry);
+    },
+    include: ['output', 'firebaseId']
+  }).env('SINGPATH_RULES_', {
+    include: ['firebaseId', 'firebaseSecret']
+  }).argv({
+    version: packageJson.version,
+    description: 'Manage SingPath firebase db rules',
+    epilog: EPILOG,
+    subCmds: CMD
+  }).done().then(settings => {
     let level;
 
-    if (args.debug) {
+    if (settings.debug) {
       level = singpathRules.logger.levels.DEBUG;
-    } else if (args.silent) {
+    } else if (settings.silent) {
       level = singpathRules.logger.levels.ERROR;
+    }
+
+    if (settings.firebaseId) {
+      settings.restFirebase = restFirebase.factory(settings.firebaseId);
     }
 
     const logger = singpathRules.logger(process.stderr, level);
 
-    args.func(args, logger).then(
-      () => process.exit(0),
-      err => {
-        console.error(err.stack || err);
-        process.exit(1);
-      }
-    );
-  });
-}
-
-
-function parseArgs(args) {
-  const parser = new argparse.ArgumentParser({
-    version: packageJson.version,
-    addHelp: true,
-    description: 'Manage SingPath firebase db rules',
-    formatterClass: argparse.RawTextHelpFormatter
-  });
-
-  parser.setDefaults(DEFAULTS);
-
-  parser.addArgument(['-d', '--debug' ], {
-    action: 'storeTrue',
-    help: 'print debug messages'
-  });
-
-  parser.addArgument(['-s', '--silent' ], {
-    action: 'storeTrue',
-    help: 'print only error messages'
-  });
-
-  const subparsers = parser.addSubparsers();
-
-  cmds.forEach(sub => {
-    const parser =  subparsers.addParser(sub.name, {
-      addHelp: true,
-      description: sub.description,
-      formatterClass: argparse.RawTextHelpFormatter
-    });
-
-    sub.options(parser);
-    parser.setDefaults({func: sub.cmd});
-  });
-
-  return readFirebaseInit().then(id => {
-    parser.setDefaults({'firebase_id': id || DEFAULTS['firebase_id']});
-    return parser.parseArgs(args);
-  });
+    return settings.cmd(settings, logger);
+  }).then(
+    () => process.exit(0),
+    err => {
+      console.error(err.stack || err);
+      process.exit(1);
+    }
+  );
 }
 
 function loadJsonRules(path) {
-  return readFile(path).then(
+  return cli.readFile(path).then(
     data => JSON.parse(data)
   ).then(
     doc => doc.rules || {}
@@ -196,7 +327,7 @@ function loadBoldRules(dir) {
   }).then(
     doc => doc.rules || {}
   ).catch(
-    err => writeFile('./rules.debug.bolt', concatBolt).then(() => Promise.reject(err))
+    err => cli.writeFile('./rules.debug.bolt', concatBolt).then(() => Promise.reject(err))
   );
 }
 
@@ -204,7 +335,7 @@ function readBoltFiles(dir) {
   return scanBoltFiles(dir).then(
     files => files.map(f => path.join(dir, f))
   ).then(
-    files => Promise.all(files.map(readFile))
+    files => Promise.all(files.map(cli.readFile))
   ).then(
     rules => rules.join('\n')
   );
@@ -228,44 +359,4 @@ function translateRules(input) {
   const symbols = bolt.parse(input);
   const gen = new bolt.Generator(symbols);
   return gen.generateRules();
-}
-
-function readFirebaseInit() {
-  const path = './firebase.json';
-
-  return readFile(path).catch(
-    () => 'null'
-  ).then(
-    content => JSON.parse(content)
-  ).then(
-    init => init && init.firebase
-  ).catch(err => {
-    console.error('failed to read/parse ./firebase.json');
-
-    return Promise.reject(err);
-  });
-}
-
-function readFile(path) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, (err, data) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data);
-      }
-    });
-  });
-}
-
-function writeFile(path, data) {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(path, data, err => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data);
-      }
-    });
-  });
 }

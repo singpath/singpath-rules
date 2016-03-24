@@ -16,7 +16,7 @@ Rules and migration scripts for Singpath Firbase db.
 ## Setup
 
 We will rely [firebase-tools](https://github.com/firebase/firebase-tools) to
-upload rules and data.
+upload data.
 
 1. setup a new npm project and install dependencies:
 
@@ -64,7 +64,7 @@ E.g, `package.json`:
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "rules": "singpath-rules compile",
-    "deploy-rules": "firebase deploy:rules",
+    "deploy-rules": "singpath-rules upload-rules -f my-firebase-production-id",
     "deploy-rules-production": "firebase deploy:rules -f my-firebase-production-id"
   },
   "author": "",
@@ -93,10 +93,11 @@ You will find the rules in `rules.json`.
 ## Uploading rules
 
 ```json
-./node_modules/.bin/firebase deploy:rules
+./node_modules/.bin/singpath-rules upload-rules
 ```
 
-Use the `-f` to switch the Firebase DB to upload to.
+Use the `-f` to switch the Firebase DB to upload to and `-a` to set the secret.
+
 
 ## Uploading data
 

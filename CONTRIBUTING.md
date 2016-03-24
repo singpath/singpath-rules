@@ -24,9 +24,9 @@ npm install
 
 Setup a new Firebase DB for testing and set some environment variables:
 ```
-SINGPATH_RULES_FB_ID=some-firebase-id
-SINGPATH_RULES_FB_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
+SINGPATH_RULES_E2E_E2E_FIREBASE_ID=some-firebase-id
+SINGPATH_RULES_E2E_E2E_E2E_FIREBASE_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```_E2E
 
 
 ## Running the e2e tests
@@ -77,8 +77,8 @@ describe('something', function() {
   beforeEach(() => {
     // reset suite before each test (includes patching console.warn)
     suite = new fb.testSuite({
-      firebaseId: process.env.SINGPATH_RULES_FB_ID,
-      firebaseSecret: process.env.SINGPATH_RULES_FB_SECRET
+      firebaseId: process.env.SINGPATH_RULES_E2E_FIREBASE_ID,
+      firebaseSecret: process.env.SINGPATH_RULES_E2E_FIREBASE_SECRET
     });
   });
 
