@@ -24,17 +24,15 @@ npm install
 
 Setup a new Firebase DB for testing and set some environment variables:
 ```
-SINGPATH_RULES_E2E_E2E_FIREBASE_ID=some-firebase-id
-SINGPATH_RULES_E2E_E2E_E2E_FIREBASE_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```_E2E
+export SINGPATH_RULES_E2E_FIREBASE_ID=some-firebase-id
+export SINGPATH_RULES_E2E_FIREBASE_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 
 ## Running the e2e tests
 
 ```shell
-npm run all-rules
-npm run upload-rules
-npm run test-e2e
+make e2e
 ```
 
 

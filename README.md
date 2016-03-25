@@ -21,17 +21,17 @@ upload data.
 1. setup a new npm project and install dependencies:
 
         ```shell
-        npm init
-        npm install --save firebase-tools
-        npm install --save singpath/singpath-rules
+        npm install -g firebase-tools
+        npm install -g @singpath/singpath-rules
         ```
 
 2. setup a Firebase project in the current directory (it should like
    to your staging DB):
 
         ```shell
-        ./node_modules/.bin/firebase init
-        ./node_modules/.bin/firebase login
+        npm init
+        firebase init
+        firebase login
         ```
 
 3. edit firebase.json to add the "rules" entry:
@@ -49,32 +49,11 @@ upload data.
         }
         ```
 
-Because `firebase-tools` and `singpath-rules` are installed locally you need to
-use `./node_modules/.bin/[script-name]`. For recurrent tasks using it,
-you should add a "scripts" entry in `package.json` which will have
-`./node_modules/.bin` in its path when executed with `npm run`.
+4. upload rules and seed data to your Firebase DB.
 
-E.g, `package.json`:
-```json
-{
-  "name": "rules",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "rules": "singpath-rules compile",
-    "deploy-rules": "singpath-rules upload-rules -f my-firebase-production-id",
-    "deploy-rules-production": "firebase deploy:rules -f my-firebase-production-id"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "firebase-tools": "^2.1.1",
-    "singpath-rules": "github:singpath/singpath-rules"
-  }
-}
-```
+        ```
+        singpath-rules init-db
+        ```
 
 
 ## Building json rules
@@ -82,9 +61,9 @@ E.g, `package.json`:
 `firebase-tools` (see below) will support bolt rules directly sometime in the
 future, but for now we need them in the current json encoded form.
 
-To compile the rules (from `node_modules/singpath-rules/rules`):
+To compile the rules:
 ```shell
-./node_modules/.bin/singpath-rules compile
+singpath-rules compile
 ```
 
 You will find the rules in `rules.json`.
@@ -97,19 +76,6 @@ You will find the rules in `rules.json`.
 ```
 
 Use the `-f` to switch the Firebase DB to upload to and `-a` to set the secret.
-
-
-## Uploading data
-
-To upload the school and badge data:
-```json
-./node_modules/.bin/firebase data:set \
-    /classMentors/badges \
-    node_modules/singpath-rules/data/classMentors/badges.json
-./node_modules/.bin/firebase data:set \
-    /classMentors/schools \
-    node_modules/singpath-rules/data/classMentors/schools.json
-```
 
 
 ## Development
