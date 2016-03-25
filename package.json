@@ -27,14 +27,15 @@
   },
   "homepage": "https://github.com/singpath/firebase-rules#readme",
   "devDependencies": {
-    "coveralls": "^2.11.4",
-    "eslint": "^1.8.0",
+    "babel-eslint": "^5.0.0-beta8",
+    "coveralls": "^2.11.6",
+    "eslint": "^1.10.3",
     "expect.js": "^0.3.1",
     "firebase-test": "^0.1.0",
-    "istanbul": "^0.4.1",
-    "mocha": "^2.3.3",
+    "istanbul": "^0.4.2",
+    "mocha": "^2.4.5",
     "mocha-lcov-reporter": "^1.0.0",
-    "sinon": "^1.17.2"
+    "sinon": "^1.17.3"
   },
   "dependencies": {
     "@singpath/cli": "^0.2.0",
