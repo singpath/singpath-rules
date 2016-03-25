@@ -13,9 +13,8 @@
     "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
     "lint": "eslint src/ tests/ e2e/",
     "rules": "./bin/singpath-rules compile",
-    "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
-    "test-e2e": "mocha e2e/index.js",
-    "upload-rules-e2e": "./bin/singpath-rules upload-rules -f $SINGPATH_RULES_E2E_FIREBASE_ID -a $SINGPATH_RULES_E2E_FIREBASE_SECRET"
+    "test": "mocha -b tests/index.js",
+    "test-e2e": "mocha e2e/index.js"
   },
   "repository": {
     "type": "git",

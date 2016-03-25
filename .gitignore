@@ -6,6 +6,7 @@ extra-rules.json
 
 # Built with npm run make-rules
 rules.json
+rules.*.json
 
 # Secrets for testing
 *.stamp

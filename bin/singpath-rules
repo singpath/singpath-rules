@@ -11,16 +11,13 @@ const fs = require('fs');
 
 const packageJson = require('../package.json');
 const singpathRules = require('../');
+const tokenLib = require('../src/tokens');
 
 const DEFAULTS = {
   firebaseId: 'singpath-play',
   output: 'rules.json'
 };
-const EPILOG = `Environment variables:
-  SINGPATH_RULES_FIREBASE_ID      Firebase ID.
-  SINGPATH_RULES_FIREBASE_SECRET  Firebase auth secret.
-
-Config:
+const EPILOG = `Config:
   You can set some default values with a JSON file named 'firebase.json' in your
   working directory.
 
@@ -32,46 +29,6 @@ Config:
     }
 
 `;
-const uploadCmd = (opts, logger) => {
-  if (!opts.firebaseSecret) {
-    return Promise.reject(new Error('The firebase secret is required'));
-  }
-
-  if (opts.firebaseSecret.length !== 40) {
-    return Promise.reject(new Error('Invalid firebase secret'));
-  }
-
-  logger.info('Compiling rules...');
-
-  const baseRules = opts.baseRule.map(loadJsonRules);
-  const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
-
-
-  return Promise.all(baseRules.concat(boltRules)).then(
-    rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
-  ).then(rules => {
-    const jsonBody = JSON.stringify({rules}, null, 2);
-
-    if (!opts.output) {
-      logger.info('skipping saving rules copy');
-      return jsonBody;
-    }
-
-    logger.info('Saving rules into "%s"...', opts.output);
-
-    return cli.writeFile(opts.output, jsonBody);
-  }).then(jsonBody => {
-    logger.info(
-      'Uploading rules to "%s" using secret "%s%s"...',
-      opts.firebaseId,
-      opts.firebaseSecret.slice(0,5),
-      '*'.repeat(35)
-    );
-    logger.info('NOTE: does not currently includes Class Mentors rules.');
-
-    return opts.restFirebase({auth: opts.firebaseSecret}).rules(jsonBody);
-  });
-};
 const CMD = [{
   name: 'init-db',
   description: 'Setup security rules and seed the DB',
@@ -81,15 +38,12 @@ const CMD = [{
       help: 'ID of Firebase DB to seed;\n(default: %(defaultValue)s)',
       defaultValue: defaults.firebaseId
     });
-    parser.addArgument(['-a', '--firebase-secret'], {
-      help: 'Firebase secret of the Firebase DB to seed.',
-      defaultValue: defaults.firebaseSecret
-    });
     parser.addArgument(['-o', '--output'], {
       metavar: 'file',
       help: 'File to output json rules to;\n(default: %(defaultValue)s)',
       defaultValue: defaults.output
     });
+    parser.addArgument(['--token']);
     parser.addArgument(['base-rule'], {
       nargs: '*',
       help: 'Base rules to merge with the singpath rules'
@@ -100,33 +54,20 @@ const CMD = [{
     const badges = require('../data/classMentors/badges.json');
     const schools = require('../data/classMentors/schools.json');
 
-    return uploadCmd(opts, logger).then(() => {
-      const ref = opts.restFirebase({
-        paths: 'classMentors/badges',
-        auth: opts.firebaseSecret
-      });
-
+    return restRef(opts).then(
+      () => uploadRules(opts, logger)
+    ).then(() => {
       logger.info('Uploading badges data...');
 
-      return ref.set(badges);
+      return opts.restRef('classMentors/badges').set(badges);
     }).then(() => {
-      const ref = opts.restFirebase({
-        paths: 'classMentors/schools',
-        auth: opts.firebaseSecret
-      });
-
       logger.info('Uploading schools data...');
 
-      return ref.set(schools);
+      return opts.restRef('classMentors/schools').set(schools);
     }).then(() => {
-      const ref = opts.restFirebase({
-        paths: 'meta/version',
-        auth: opts.firebaseSecret
-      });
-
       logger.info('Setting DB version to 1...');
 
-      return ref.set(1);
+      return opts.restRef('meta/version').set(1);
     });
   }
 
@@ -139,22 +80,21 @@ const CMD = [{
       help: 'Firebase db to upload rules to;\n(default: %(defaultValue)s)',
       defaultValue: defaults.firebaseId
     });
-    parser.addArgument(['-a', '--firebase-secret'], {
-      help: 'Firebase secret of the Firebase DB to upload rules to.',
-      defaultValue: defaults.firebaseSecret
-    });
     parser.addArgument(['-o', '--output'], {
       metavar: 'file',
       help: 'File to output json rules to;\n(default: %(defaultValue)s)',
       defaultValue: defaults.output
     });
+    parser.addArgument(['--token']);
     parser.addArgument(['base-rule'], {
       nargs: '*',
       help: 'Base rules to merge with the singpath rules'
     });
   },
 
-  cmd: uploadCmd
+  cmd(opts, logger) {
+    return restRef(opts).then(() => uploadRules(opts, logger));
+  }
 }, {
   name: 'compile',
   description: 'Compile bolt rules',
@@ -171,13 +111,11 @@ const CMD = [{
     });
   },
 
-  cmd(opts) {
-    const baseRules = opts.baseRule.map(loadJsonRules);
-    const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
+  cmd(opts, logger) {
+    logger.info('Compiling rules to "%s"...', opts.output);
+    logger.debug('They will be merged with %s', opts.baseRule.join(', '));
 
-    return Promise.all(baseRules.concat(boltRules)).then(
-      rulesSet => rulesSet.reduce((merged, rules) => Object.assign(merged, rules), {})
-    ).then(
+    return compileRules(opts.baseRule).then(
       rules => cli.writeFile(opts.output, JSON.stringify({rules}, null, 2))
     );
   }
@@ -193,9 +131,8 @@ const CMD = [{
   },
 
   cmd(opts, logger) {
-    const id = opts['firebase_id'];
+    const id = opts.firebaseId;
     const ref = new Firebase(`https://${id}.firebaseio.com/`);
-    const queryLog = data => console.log(JSON.stringify(data));
 
     return singpathRules.auth(ref).then(token => {
       const migrater = singpathRules.migrate(ref, token, {logger, queryLog});
@@ -228,7 +165,7 @@ const CMD = [{
   },
 
   cmd(opts, logger) {
-    const id = opts['firebase_id'];
+    const id = opts.firebaseId;
     const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
     return singpathRules.auth(ref).then(token => {
@@ -249,7 +186,7 @@ const CMD = [{
   },
 
   cmd(opts, logger) {
-    const id = opts['firebase_id'];
+    const id = opts.firebaseId;
     const ref = new Firebase(`https://${id}.firebaseio.com/`);
 
     return singpathRules.auth(ref).then(token => {
@@ -278,8 +215,6 @@ function main() {
       return fn(entry);
     },
     include: ['output', 'firebaseId']
-  }).env('SINGPATH_RULES_', {
-    include: ['firebaseId', 'firebaseSecret']
   }).argv({
     version: packageJson.version,
     description: 'Manage SingPath firebase db rules',
@@ -294,10 +229,6 @@ function main() {
       level = singpathRules.logger.levels.ERROR;
     }
 
-    if (settings.firebaseId) {
-      settings.restFirebase = restFirebase.factory(settings.firebaseId);
-    }
-
     const logger = singpathRules.logger(process.stderr, level);
 
     return settings.cmd(settings, logger);
@@ -307,6 +238,42 @@ function main() {
       console.error(err.stack || err);
       process.exit(1);
     }
+  );
+}
+
+// extends opts with restRest fn (not all commands need it).
+function restRef(opts) {
+  const factory = restFirebase.factory(opts.firebaseId);
+
+  if (opts.token) {
+    opts.restRef = paths => factory({paths, auth: opts.token});
+    return Promise.resolve();
+  }
+
+  return tokenLib.get(opts.firebaseId).then(token => {
+    opts.restRef = paths => factory({paths, auth: token});
+  });
+}
+
+function queryLog(data) {
+  console.log(JSON.stringify(data));
+}
+
+function compileRules(baseRule) {
+  const plainRules = baseRule.map(
+    path => loadJsonRules(path)
+  );
+  const boltRules = loadBoldRules(path.join(__dirname, '../rules'));
+
+  return Promise.all(plainRules.concat(boltRules)).then(
+    rulesSet => mergeRules(rulesSet)
+  );
+}
+
+function mergeRules(rulesSet) {
+  return rulesSet.reduce(
+    (merged, rules) => Object.assign(merged, rules),
+    {}
   );
 }
 
@@ -358,5 +325,28 @@ function scanBoltFiles(dir) {
 function translateRules(input) {
   const symbols = bolt.parse(input);
   const gen = new bolt.Generator(symbols);
+
   return gen.generateRules();
+}
+
+function uploadRules(opts, logger) {
+  logger.info('Compiling rules...');
+
+  return compileRules(opts.baseRule).then(rules => {
+    const jsonBody = JSON.stringify({rules}, null, 2);
+
+    if (!opts.output) {
+      logger.info('skipping saving rules copy');
+      return jsonBody;
+    }
+
+    logger.info('Saving rules into "%s"...', opts.output);
+
+    return cli.writeFile(opts.output, jsonBody);
+  }).then(jsonBody => {
+    logger.info('Uploading rules to "%s"...', opts.firebaseId);
+    logger.info('NOTE: does not currently includes Class Mentors rules.');
+
+    return opts.restRef().rules(jsonBody);
+  });
 }
