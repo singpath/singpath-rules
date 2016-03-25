@@ -43,7 +43,7 @@ const CMD = [{
       help: 'File to output json rules to;\n(default: %(defaultValue)s)',
       defaultValue: defaults.output
     });
-    parser.addArgument(['--token']);
+    parser.addArgument(['--secret']);
     parser.addArgument(['base-rule'], {
       nargs: '*',
       help: 'Base rules to merge with the singpath rules'
@@ -85,7 +85,7 @@ const CMD = [{
       help: 'File to output json rules to;\n(default: %(defaultValue)s)',
       defaultValue: defaults.output
     });
-    parser.addArgument(['--token']);
+    parser.addArgument(['--secret']);
     parser.addArgument(['base-rule'], {
       nargs: '*',
       help: 'Base rules to merge with the singpath rules'
@@ -245,8 +245,8 @@ function main() {
 function restRef(opts) {
   const factory = restFirebase.factory(opts.firebaseId);
 
-  if (opts.token) {
-    opts.restRef = paths => factory({paths, auth: opts.token});
+  if (opts.secret) {
+    opts.restRef = paths => factory({paths, auth: opts.secret});
     return Promise.resolve();
   }
 
