@@ -6,7 +6,6 @@ const url = require('url');
 
 const config = new Configstore('firebase-tools');
 
-
 function getToken(firebaseId, session) {
   session = session || config.get('session');
 
@@ -58,7 +57,6 @@ function auth(ref, session) {
     });
   });
 }
-
 
 exports.get = getToken;
 exports.auth = auth;

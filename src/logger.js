@@ -1,7 +1,6 @@
 'use strict';
 const util = require('util');
 
-
 const DEBUG = 10;
 const INFO = 20;
 const ERROR = 30;

@@ -11,12 +11,10 @@
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "data-badges": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/badges -o data/classMentors/badges.json",
     "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
-    "lint": "eslint src/ tests/ e2e/",
+    "lint": "jscs src/ bin/ tests/ && eslint src/ tests/ bin/",
     "rules": "./bin/singpath-rules compile",
-    "test": "eslint src/ tests/ e2e/ && mocha tests/index.js",
-    "test-e2e": "mocha e2e/index.js",
-    "upload-rules": "firebase deploy:rules -f $SINGPATH_RULES_FB_ID",
-    "upload-rules-ci": "./bin/singpath-rules compile && firebase deploy:rules -f $SINGPATH_RULES_FB_ID --token \"$SINGPATH_DEPLOY_TOKEN\""
+    "test": "mocha -b tests/index.js",
+    "test-e2e": "mocha e2e/index.js"
   },
   "repository": {
     "type": "git",
@@ -29,22 +27,25 @@
   },
   "homepage": "https://github.com/singpath/firebase-rules#readme",
   "devDependencies": {
-    "coveralls": "^2.11.4",
-    "eslint": "^1.8.0",
+    "babel-eslint": "^5.0.0-beta8",
+    "coveralls": "^2.11.6",
+    "eslint": "^1.10.3",
     "expect.js": "^0.3.1",
     "firebase-test": "^0.1.0",
-    "istanbul": "^0.4.1",
-    "mocha": "^2.3.3",
+    "istanbul": "^0.4.2",
+    "jscs": "^2.11.0",
+    "mocha": "^2.4.5",
     "mocha-lcov-reporter": "^1.0.0",
-    "sinon": "^1.17.2"
+    "sinon": "^1.17.3"
   },
   "dependencies": {
-    "argparse": "^1.0.3",
+    "@singpath/cli": "^0.2.0",
     "configstore": "^1.3.0",
     "firebase": "^2.3.1",
     "firebase-bolt": "^0.5.0",
     "firebase-token-generator": "^2.0.0",
     "firebase-tools": "^2.1.0",
-    "request": "^2.67.0"
+    "request": "^2.67.0",
+    "rest-firebase": "^0.4.0"
   }
 }

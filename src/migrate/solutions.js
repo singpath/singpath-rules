@@ -1,22 +1,24 @@
 'use strict';
 
 const Firebase = require('firebase');
-const rest = require('../rest');
+const restFirebase = require('rest-firebase');
 
 const version = 1;
+const shallow = true;
 const noop = () => undefined;
-
 
 const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token, opts) {
     const root = ref.root();
+    const baseUri = root.toString();
+    const rest = restFirebase.factory(baseUri);
 
-    this.baseUri = root.toString();
+    this.baseUri = baseUri;
+    this.client = paths => rest({paths, token});
 
     this.dest = root.child('singpath');
     this.taskDest = root.child('singpath/queues/default/tasks');
-    this.client = rest.client(this.baseUri, token);
 
     opts = opts || {};
     this.queryLog = opts.queryLog || noop;
@@ -61,7 +63,9 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   task(pathId, levelId, problemId, publicId, solution) {
-    return this.client.get(`auth/publicIds/${publicId}`).then(uid => {
+    const ref = this.client(`auth/publicIds/${publicId}`);
+
+    return ref.get().then(uid => {
       return {
         owner: uid,
         payload: solution.payload,
@@ -118,7 +122,9 @@ const Upgrader = exports.Upgrader = class Upgrader {
     return new Promise((resolve, reject) => {
       const data = {
         [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
+        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: (
+            this.solutionRef(solution)
+          )
       };
 
       this.dest.update(data, err => {
@@ -141,9 +147,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
       return new Promise((resolve, reject) => {
         const data = {
+          [`queues/default/tasks/${taskId}`]: task,
           [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-          [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution),
-          [`queues/default/tasks/${taskId}`]: task
+          [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: (
+            this.solutionRef(solution)
+          )
         };
 
         this.dest.update(data, err => {
@@ -199,6 +207,7 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
   migrateSolutions(pathId, levelId, problemId) {
     this.logger.info('migrating solutions at /singpath/solutions/%s/%s/%s ...', pathId, levelId, problemId);
+
     return Promise.all([
       this.solutions(pathId, levelId, problemId),
       this.resolutions(pathId, levelId, problemId)
@@ -226,33 +235,39 @@ const Upgrader = exports.Upgrader = class Upgrader {
   }
 
   pathIds() {
-    return this.client.get('singpath/paths', true).then(ids => {
+    const ref = this.client('singpath/paths');
+
+    return ref.get({shallow}).then(ids => {
       return ids !== null ? Object.keys(ids) : [];
     });
   }
 
   levelIds(pathId) {
-    return this.client.get(`singpath/levels/${pathId}`, true).then(ids => {
+    const ref = this.client(`singpath/levels/${pathId}`);
+
+    return ref.get({shallow}).then(ids => {
       return ids !== null ? Object.keys(ids) : [];
     });
   }
 
   problemIds(pathId, levelId) {
-    return this.client.get(`singpath/problems/${pathId}/${levelId}`, true).then(ids => {
+    const ref = this.client(`singpath/problems/${pathId}/${levelId}`);
+
+    return ref.get({shallow}).then(ids => {
       return ids !== null ? Object.keys(ids) : [];
     });
   }
 
   solutions(pathId, levelId, problemId) {
-    const path = `singpath/solutions/${pathId}/${levelId}/${problemId}`;
+    const ref = this.client(`singpath/solutions/${pathId}/${levelId}/${problemId}`);
 
-    return this.client.get(path).then(solutions => solutions || {});
+    return ref.get().then(solutions => solutions || {});
   }
 
   resolutions(pathId, levelId, problemId) {
-    const path = `singpath/resolutions/${pathId}/${levelId}/${problemId}`;
+    const ref = this.client(`singpath/resolutions/${pathId}/${levelId}/${problemId}`);
 
-    return this.client.get(path).then(resolutions => resolutions || {});
+    return ref.get().then(resolutions => resolutions || {});
   }
 };
 

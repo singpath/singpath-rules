@@ -70,8 +70,8 @@ describe('singpath', function() {
 
   beforeEach(() => {
     suite = new fb.testSuite({
-      firebaseId: process.env.SINGPATH_RULES_FB_ID,
-      firebaseSecret: process.env.SINGPATH_RULES_FB_SECRET,
+      firebaseId: process.env.SINGPATH_RULES_E2E_FIREBASE_ID,
+      firebaseSecret: process.env.SINGPATH_RULES_E2E_FIREBASE_SECRET,
       defaultAuthData: DEFAULT_AUTH_DATA
     });
 

@@ -3,8 +3,6 @@
 const expect = require('expect.js');
 const sinon = require('sinon');
 const migrateJavaProblems = require('../../src/migrate/java-problems');
-const rest = require('../../src/rest');
-
 
 const INPUT = `
 SingPath sp = new SingPath();
@@ -26,7 +24,6 @@ public class SingPathTest extends SolutionRunner {
   }
 }`.trim();
 
-
 describe('migrate/java-problems', () => {
 
   describe('Upgrader', () => {
@@ -37,7 +34,6 @@ describe('migrate/java-problems', () => {
         get: sinon.stub().returns(Promise.resolve(null)),
         set: sinon.stub().returns(Promise.resolve())
       };
-      sinon.stub(rest, 'client').returns(client);
 
       const ref = {
         root: sinon.stub().returnsThis(),
@@ -47,14 +43,8 @@ describe('migrate/java-problems', () => {
       upgrader = new migrateJavaProblems.Upgrader(ref, 'some-token');
     });
 
-    afterEach(() => {
-      rest.client.restore();
-    });
-
     it('should create a rest client', () => {
-      expect(upgrader.client).to.be.ok();
-      sinon.assert.calledOnce(rest.client);
-      sinon.assert.calledWithExactly(rest.client, 'http://some-id.firebaseio.com/', 'some-token');
+      expect(upgrader.client().toString()).to.be('http://some-id.firebaseio.com/.json');
     });
 
     describe('start', () => {
@@ -86,12 +76,14 @@ describe('migrate/java-problems', () => {
     describe('migratePaths', () => {
       beforeEach(() => {
         sinon.stub(upgrader, 'migrateLevels').returns(Promise.resolve());
+        sinon.stub(upgrader, 'client').withArgs('singpath/paths').returns(client);
       });
 
       it('should query paths', () => {
+
         return upgrader.migratePaths('somePathId').then(() => {
           sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/paths');
+          sinon.assert.calledWithExactly(client.get);
         });
       });
 
@@ -115,12 +107,13 @@ describe('migrate/java-problems', () => {
 
       beforeEach(() => {
         sinon.stub(upgrader, 'migrateProblemTests').returns(Promise.resolve());
+        sinon.stub(upgrader, 'client').withArgs('singpath/levels/somePathId').returns(client);
       });
 
       it('should query a list of level', () => {
         return upgrader.migrateLevels('somePathId').then(() => {
           sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(client.get, 'singpath/levels/somePathId', true);
+          sinon.assert.calledWithExactly(client.get, sinon.match({shallow: true}));
         });
       });
 
@@ -143,32 +136,33 @@ describe('migrate/java-problems', () => {
 
       beforeEach(() => {
         sinon.stub(upgrader, 'migrateSolutionsTests').returns(Promise.resolve());
+        sinon.stub(upgrader, 'client');
+
+        upgrader.client.withArgs(
+          'singpath/problems/somePathId/someLevelId'
+        ).returns(client);
+
+        upgrader.client.withArgs(
+          'singpath/problems/somePathId/someLevelId/someProblemId/tests'
+        ).returns(client);
       });
 
       it('should query problems', () => {
 
         return upgrader.migrateProblemTests('somePathId', 'someLevelId').then(() => {
           sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(
-            client.get,
-            'singpath/problems/somePathId/someLevelId'
-          );
+          sinon.assert.calledWithExactly(client.get);
         });
       });
 
       it('should update problems tests', () => {
-        const solutions = {'someProblemId' : {'tests': INPUT}};
+        const solutions = {'someProblemId': {'tests': INPUT}};
 
         client.get.returns(Promise.resolve(solutions));
 
         return upgrader.migrateProblemTests('somePathId', 'someLevelId').then(() => {
           sinon.assert.calledOnce(client.set);
-          sinon.assert.calledWithExactly(
-            client.set,
-            'singpath/problems/somePathId/someLevelId/someProblemId/tests',
-            OUTPUT,
-            upgrader.queryLog
-          );
+          sinon.assert.calledWithExactly(client.set, OUTPUT);
         });
       });
 
@@ -176,33 +170,35 @@ describe('migrate/java-problems', () => {
 
     describe('migrateSolutionsTests', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+        upgrader.client.withArgs(
+          'singpath/queuedSolutions/somePathId/someLevelId/someProblemId'
+        ).returns(client);
+        upgrader.client.withArgs(
+          'singpath/queuedSolutions/somePathId/someLevelId/someProblemId/bob/default/payload/tests'
+        ).returns(client);
+      });
+
       it('should query solution', () => {
 
         return upgrader.migrateSolutionsTests('somePathId', 'someLevelId', 'someProblemId', 'some code').then(() => {
           sinon.assert.calledOnce(client.get);
-          sinon.assert.calledWithExactly(
-            client.get,
-            'singpath/queuedSolutions/somePathId/someLevelId/someProblemId'
-          );
+          sinon.assert.calledWithExactly(client.get);
         });
       });
 
       it('should update payload tests', () => {
         const solutions = {
-          'bob' : {'default': {payload: {tests: 'some other code'}}},
-          'alice' : {'default': {}}
+          'bob': {'default': {payload: {tests: 'some other code'}}},
+          'alice': {'default': {}}
         };
 
         client.get.returns(Promise.resolve(solutions));
 
         return upgrader.migrateSolutionsTests('somePathId', 'someLevelId', 'someProblemId', 'some code').then(() => {
           sinon.assert.calledOnce(client.set);
-          sinon.assert.calledWithExactly(
-            client.set,
-            'singpath/queuedSolutions/somePathId/someLevelId/someProblemId/bob/default/payload/tests',
-            'some code',
-            upgrader.queryLog
-          );
+          sinon.assert.calledWithExactly(client.set, 'some code');
         });
       });
 
@@ -210,13 +206,22 @@ describe('migrate/java-problems', () => {
 
     describe('migrateTaskTests', () => {
 
+      beforeEach(function() {
+        sinon.stub(upgrader, 'client');
+        upgrader.client.withArgs(
+          'singpath/queues/default/tasks'
+        ).returns(client);
+        upgrader.client.withArgs(
+          'singpath/queues/default/tasks/someTaskId/payload/tests'
+        ).returns(client);
+      });
+
       it('should query non completed task', () => {
         upgrader.migrateTaskTests();
 
         sinon.assert.calledOnce(client.get);
         sinon.assert.calledWithExactly(
           client.get,
-          'singpath/queues/default/tasks',
           sinon.match({
             orderBy: '"completed"',
             equalTo: false
@@ -241,12 +246,7 @@ describe('migrate/java-problems', () => {
 
         return upgrader.migrateTaskTests().then(() => {
           sinon.assert.calledOnce(client.set);
-          sinon.assert.calledWithExactly(
-            client.set,
-            'singpath/queues/default/tasks/someTaskId/payload/tests',
-            OUTPUT,
-            upgrader.queryLog
-          );
+          sinon.assert.calledWithExactly(client.set, OUTPUT);
         });
       });
 

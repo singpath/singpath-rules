@@ -12,12 +12,12 @@
 default: rules.json
 .PHONY: default
 
-.upload-rules.${SINGPATH_RULES_FB_ID}.stamp: rules.json
-	# SINGPATH_RULES_FB_ID should be set.
+.upload-rules.${SINGPATH_RULES_E2E_FIREBASE_ID}.stamp: rules.json
+	# SINGPATH_RULES_E2E_FIREBASE_ID should be set.
 	# 
 	# example:
 	# 
-	#   export SINGPATH_RULES_FB_ID=singpath-dev"
+	#   export SINGPATH_RULES_E2E_FIREBASE_ID=singpath-dev"
 	#   
 	npm run upload-rules
 	touch $@
@@ -25,13 +25,13 @@ default: rules.json
 rules.json: rules/*.bolt
 	npm run rules
 
-e2e: .upload-rules.${SINGPATH_RULES_FB_ID}.stamp
-	# SINGPATH_RULES_FB_SECRET and SINGPATH_RULES_FB_ID should be set.
+e2e: .upload-rules.${SINGPATH_RULES_E2E_FIREBASE_ID}.stamp
+	# SINGPATH_RULES_E2E_FIREBASE_ID and SINGPATH_RULES_E2E_FIREBASE_SECRET should be set.
 	# 
 	# example:
 	# 
-	#   export SINGPATH_RULES_FB_ID=singpath-dev"
-	#   export SINGPATH_RULES_FB_SECRET=xxxxxxx
+	#   export SINGPATH_RULES_E2E_FIREBASE_ID=singpath-dev"
+	#   export SINGPATH_RULES_E2E_FIREBASE_SECRET=xxxxxxx
 	#   
 	npm run test-e2e
 .PHONY: e2e
@@ -43,5 +43,5 @@ test:
 	npm run test
 .PHONY: tests
 
-upload-rules: .upload-rules.${SINGPATH_RULES_FB_ID}.stamp
+upload-rules: .upload-rules.${SINGPATH_RULES_E2E_FIREBASE_ID}.stamp
 .PHONY: upload-rules

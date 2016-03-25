@@ -3,7 +3,6 @@
 require('./test_migrate_solutions');
 require('./test_migrate_java_problems');
 
-
 const expect = require('expect.js');
 const sinon = require('sinon');
 const migrate = require('../../src/migrate');
@@ -55,7 +54,7 @@ describe('Migrator', () => {
         const upgrades = upgrader.upgrades(0);
 
         upgrades.reduce((prev, curr) => {
-          expect(curr.version ).to.be.greaterThan(prev.version);
+          expect(curr.version).to.be.greaterThan(prev.version);
           return curr;
         });
       });
