@@ -5,7 +5,6 @@ const sinon = require('sinon');
 const request = require('request');
 const tokens = require('../src/tokens.js');
 
-
 describe('tokens', () => {
   let resp, session;
 

@@ -19,7 +19,6 @@ public class SingPathTest extends SolutionRunner {
   }
 }`;
 
-
 const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token, opts) {
@@ -178,7 +177,6 @@ const Upgrader = exports.Upgrader = class Upgrader {
     const paths = `singpath/queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default/payload/tests`;
     const ref = this.client(paths);
 
-
     return ref.set(tests);
   }
 
@@ -223,7 +221,6 @@ const Upgrader = exports.Upgrader = class Upgrader {
     return ref.set(tests);
   }
 };
-
 
 exports.version = version;
 exports.description = 'Convert Java problems to new verifier';

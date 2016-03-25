@@ -11,7 +11,7 @@
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha tests/index.js --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "data-badges": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/badges -o data/classMentors/badges.json",
     "data-schools": "mkdir -p data/classMentors && ./node_modules/.bin/firebase data:get -f singpath --pretty /classMentors/schools -o data/classMentors/schools.json",
-    "lint": "eslint src/ tests/ e2e/",
+    "lint": "jscs src/ bin/ tests/ && eslint src/ tests/ bin/",
     "rules": "./bin/singpath-rules compile",
     "test": "mocha -b tests/index.js",
     "test-e2e": "mocha e2e/index.js"
@@ -33,6 +33,7 @@
     "expect.js": "^0.3.1",
     "firebase-test": "^0.1.0",
     "istanbul": "^0.4.2",
+    "jscs": "^2.11.0",
     "mocha": "^2.4.5",
     "mocha-lcov-reporter": "^1.0.0",
     "sinon": "^1.17.3"

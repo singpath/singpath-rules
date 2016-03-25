@@ -7,7 +7,6 @@ const version = 1;
 const shallow = true;
 const noop = () => undefined;
 
-
 const Upgrader = exports.Upgrader = class Upgrader {
 
   constructor(ref, token, opts) {
@@ -123,7 +122,9 @@ const Upgrader = exports.Upgrader = class Upgrader {
     return new Promise((resolve, reject) => {
       const data = {
         [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution)
+        [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: (
+            this.solutionRef(solution)
+          )
       };
 
       this.dest.update(data, err => {
@@ -146,9 +147,11 @@ const Upgrader = exports.Upgrader = class Upgrader {
 
       return new Promise((resolve, reject) => {
         const data = {
+          [`queues/default/tasks/${taskId}`]: task,
           [`queuedSolutions/${pathId}/${levelId}/${problemId}/${publicId}/default`]: solution,
-          [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: this.solutionRef(solution),
-          [`queues/default/tasks/${taskId}`]: task
+          [`userProfiles/${publicId}/queuedSolutions/${pathId}/${levelId}/${problemId}/default`]: (
+            this.solutionRef(solution)
+          )
         };
 
         this.dest.update(data, err => {
